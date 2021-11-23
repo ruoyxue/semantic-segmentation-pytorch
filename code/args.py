@@ -88,13 +88,13 @@ class TrainArgs(Args):
             raise RuntimeError("Invalid args['device'] : got '" + repr(self.args.device) + "'")
 
         # train_data_path
-        # if not os.path.exists(os.path.join(args.train_data_path, "image")) or \
-        #     not os.path.exists(os.path.join(args.train_data_path, "label")):
-        #     raise RuntimeError("Invalid train_data_path, directory '" + args.train_data_path +
-        #                        "'does not includes 'image' and 'label'")
-        # if len(os.listdir(os.path.join(args.train_data_path, "image"))) == 0 or \
-        #     len(os.listdir(os.path.join(args.train_data_path, "label"))) == 0:
-        #     raise RuntimeError("Train data directory '" + args.train_data_path + "' is empty")
+        if not os.path.exists(os.path.join(self.args.train_data_path, "image")) or \
+            not os.path.exists(os.path.join(self.args.train_data_path, "label")):
+            raise RuntimeError("Invalid train_data_path, directory '" + self.args.train_data_path +
+                               "'does not includes 'image' and 'label'")
+        if len(os.listdir(os.path.join(self.args.train_data_path, "image"))) == 0 or \
+            len(os.listdir(os.path.join(self.args.train_data_path, "label"))) == 0:
+            raise RuntimeError("Train data directory '" + self.args.train_data_path + "' is empty")
 
         # save_model_path
         if not os.path.exists(self.args.save_model_path):
@@ -144,7 +144,7 @@ class TestArgs(Args):
         else:
             raise RuntimeError("Invalid args['device'] : got '" + self.args.device + "'")
 
-        # train_data_path
+        # test_data_path
         if not os.path.exists(os.path.join(self.args.train_data_path, "image")) or \
            not os.path.exists(os.path.join(self.args.train_data_path, "label")):
             raise RuntimeError("Invalid train_data_path, directory '" + self.args.train_data_path +
