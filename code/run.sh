@@ -11,7 +11,7 @@ then
 echo "------------Training Process------------" 
 python train.py \
 --model fcn8s \
---epochs 10 \
+--epochs 30 \
 --n_class 13 \
 --batch_size 8 \
 --lr 0.1 \

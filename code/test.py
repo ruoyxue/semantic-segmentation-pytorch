@@ -6,7 +6,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 import argparse
-from utils.evaluator import Classification_Evaluator
+from utils.evaluator import SegmentationEvaluator
 from torchvision import datasets, transforms
 from args import TestArgs
 
@@ -14,15 +14,13 @@ from args import TestArgs
 def tester(test_args: argparse):
     logging.info(datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"))
     # 1. -------------Prepare dataset, dataloader, evaluator---------------------------
-    # dataset = TrainDataset()
-    # dataiter = DataLoader(dataset)
     test_dataloader = torch.utils.data.DataLoader(
         datasets.FashionMNIST('../dataset/fashionmnist_data/', train=False, transform=transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,))
         ])),
         batch_size=test_args.batch_size)
-    evaluator = Classification_Evaluator(true_label=range(10))
+    evaluator = SegmentationEvaluator(true_label=range(test_args.n_class))
 
     # 2. ----------------------------Testing Process and evaluation-------------------------------------
     test_args.model.load_state_dict(torch.load(test_args.load_model_path))

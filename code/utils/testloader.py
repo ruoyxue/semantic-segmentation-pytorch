@@ -1,7 +1,7 @@
 """
 Taking into consideration that pytorch dataset and dataloader
 seem to be clumsy for daily self-use, I would like to construct a
-specialised light-weight iterator for data preparation
+specialised light-weight trainloader for data preparation
 """
 import numpy as np
 import torch
@@ -10,11 +10,10 @@ import os
 import datetime
 from typing import List, Callable, Optional, Tuple
 import rasterio
-import time
 
 
-class ComputerVisionIterator:
-    """ Base class for iterator for computer vision
+class ComputerVisionTestLoader:
+    """ Base class for test loader for computer vision
     :param image_path: image path
     :param label_path: label path
     :param batch_size: how many samples per batch to load
@@ -91,7 +90,7 @@ class ComputerVisionIterator:
         return len(self.image_path_list)
 
 
-class PNGIterator(ComputerVisionIterator):
+class PNGTestloader(ComputerVisionTestLoader):
     """ subclass to read and solve png files """
     def __init__(self, image_path: str, label_path: str, batch_size: int = 1,
                  drop_last: bool = False, shuffle: bool = False,
@@ -106,7 +105,7 @@ class PNGIterator(ComputerVisionIterator):
             return tem
 
 
-class TIFFIterator(ComputerVisionIterator):
+class TIFFTestloader(ComputerVisionTestLoader):
     """ subclass to read and solve tiff tiles """
     def __init__(self, image_path: str, label_path: str, batch_size: int = 1,
                  drop_last: bool = False, shuffle: bool = False,
@@ -123,3 +122,4 @@ class TIFFIterator(ComputerVisionIterator):
             with rasterio.open(path) as file:
                 data = file.read(1)
                 return data
+

@@ -8,7 +8,7 @@ import time
 import datetime
 import cv2
 
-from utils import PNGIterator, TIFFIterator
+from utils import PNGTrainloader, TIFFTrainloader
 image_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/image"
 label_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/label"
 

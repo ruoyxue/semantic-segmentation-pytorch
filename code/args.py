@@ -113,7 +113,10 @@ class TestArgs(Args):
         parser = argparse.ArgumentParser(description="Training Process")
         parser.add_argument("--model", type=str, required=True, help="Model to be used")
         parser.add_argument("--n_class", type=int, default=2, help="Label categories")
-        parser.add_argument("--batchsize", type=int, default=1, help="Batch size")
+        parser.add_argument("--batch_size", type=int, default=1, help="Batch size")
+        parser.add_argument("--chip_size", type=int, default=256, help="chip size in sliding prediction")
+        parser.add_argument("--stride", type=int, default=128, help="stride in sliding prediction")
+
         parser.add_argument("--device", type=str, default="cpu", help="Device for training")
         parser.add_argument("--test_data_path", type=str, required=True,
                             help="Path for testing data, with dir 'image' and 'label'")

@@ -9,23 +9,21 @@ from torch import optim, nn
 from args import TrainArgs
 import argparse
 from utils import ClassificationEvaluator, SegmentationEvaluator
-from utils import PNGIterator, TIFFIterator
+from utils import PNGTrainloader, TIFFTrainloader
 
 
 def trainer(train_args: argparse):
     logging.info(datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"))
     # 1. -------------Prepare dataset, dataloader, optimizer, scheduler, loss, evaluator---------------------------
-    # dataset = TrainDataset()
-    # dataiter = DataLoader(dataset)
     train_args.model.to(train_args.device)
 
     def preprocessing(image, label):
         return cv2.resize(image, (256, 256)), cv2.resize(label, (256, 256), cv2.INTER_NEAREST)
 
-    train_dataloader = PNGIterator(image_path=os.path.join(train_args.train_data_path, "image"),
-                                   label_path=os.path.join(train_args.train_data_path, "label"),
-                                   batch_size=train_args.batch_size, drop_last=True, shuffle=True,
-                                   preprocessing=preprocessing)
+    train_dataloader = PNGTrainloader(image_path=os.path.join(train_args.train_data_path, "image"),
+                                      label_path=os.path.join(train_args.train_data_path, "label"),
+                                      batch_size=train_args.batch_size, drop_last=True, shuffle=True,
+                                      preprocessing=preprocessing)
 
     # train_dataloader = torch.utils.data.DataLoader(
     #     datasets.FashionMNIST('../dataset/fashionmnist_data/', train=True, download=True,
@@ -37,8 +35,8 @@ def trainer(train_args: argparse):
     criterion = nn.CrossEntropyLoss()
     evaluator = SegmentationEvaluator(true_label=range(12))
     optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.25, threshold=5e-3,
-                                                     patience=1, min_lr=1e-5, verbose=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, threshold=5e-3,
+                                                     patience=2, min_lr=1e-6, verbose=True)
 
     # 2. ----------------whether load checkpoint or not--------------------------------------------------
     start_epoch = 1  # range(start_epoch, epochs+1) which works for loading checkpoint
@@ -74,8 +72,8 @@ def trainer(train_args: argparse):
         evaluator.clear()
         scheduler.step(loss_)
         if epoch % 5 == 0:
-            # torch.save(args.model.state_dict(),
-            #            os.path.join(args.save_model_path, "model_epoch_{}.pth".format(epoch)))
+            torch.save(args.model.state_dict(),
+                       os.path.join(args.save_model_path, "model_epoch_{}.pth".format(epoch)))
             logging.info(f"\nepoch {epoch} model saved successfully\n")
 
             # whether to save checkpoint or not

@@ -1,8 +1,8 @@
 from .evaluator import ClassificationEvaluator, SegmentationEvaluator
-from .dataiterator import PNGIterator, TIFFIterator
+from .trainloader import PNGTrainloader, TIFFTrainloader
 __all__ = [
     "ClassificationEvaluator",
     "SegmentationEvaluator",
-    "PNGIterator",
-    "TIFFIterator"
+    "PNGTrainloader",
+    "TIFFTrainloader"
 ]
