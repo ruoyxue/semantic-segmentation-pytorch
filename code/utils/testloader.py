@@ -2,7 +2,11 @@
 Taking into consideration that pytorch dataset and dataloader
 seem to be clumsy for daily self-use, I would like to construct a
 specialised light-weight trainloader for data preparation
+
+:TODO need to adjust fetcher to make it more readable
 """
+import logging
+
 import numpy as np
 import torch
 import cv2
@@ -10,116 +14,175 @@ import os
 import datetime
 from typing import List, Callable, Optional, Tuple
 import rasterio
+import imagesize
 
 
 class ComputerVisionTestLoader:
     """ Base class for test loader for computer vision
     :param image_path: image path
-    :param label_path: label path
+    :param chipsize: chip size when solve large images (chipsize, chipsize)
+    :param stride: stride between two chipped images
     :param batch_size: how many samples per batch to load
-    :param drop_last: if True, drop the last incomplete batch,
-    :param shuffle: if True, shuffle data in __iter__
     :param preprocessing: if not None, use preprocessing function after loading
 
-    Note: by default, we set image's name and label's name to be the same,
-          it's suggested that you set your own way via method
-          `prepare_image_name_list`
+    Note: we save all chip images information in self.chip_info in form of
+          (image_index, height_coord, width_coord),
+          where image_index refers to the image that chipped image belongs to (in terms of os.listdir)
+          , (height_coord, width_coord) denotes the upper-left point coordinate of chipped image
     """
-    def __init__(self, image_path: str, label_path: str, batch_size: int = 1,
-                 drop_last: bool = False, shuffle: bool = False,
-                 preprocessing: Optional[Callable] = None):
-        self.image_path = image_path
-        self.label_path = label_path
-        self.batch_size = batch_size
-        self.drop_last = drop_last
-        self.shuffle = shuffle
-        self.preprocessing = preprocessing
-        self.image_path_list = []
-        self.label_path_list = []
-        self.prepare_image_label_list()
+    whole_image: torch.tensor = None
+    count: torch.tensor = None
+    current_image_index: int = None
 
-    def prepare_image_label_list(self):
-        """ save image's and label's absolute path correspondingly """
-        for image_name in os.listdir(self.image_path):
-            if os.path.exists(os.path.join(self.label_path, image_name)):
-                self.image_path_list.append(os.path.join(self.image_path, image_name))
-                self.label_path_list.append(os.path.join(self.label_path, image_name))
+    def __init__(self, image_path: str, chip_size: int, stride: int, n_class: int,
+                 batch_size: int = 1, preprocessing: Optional[Callable] = None):
+        self.image_name_list = []
+        self.image_path_list = []
+        for image_name in os.listdir(image_path):
+            self.image_name_list.append(image_name)
+            self.image_path_list.append(os.path.join(image_path, image_name))
+        self.chipsize = chip_size
+        self.stride = stride
+        self.n_class = n_class
+        self.batch_size = batch_size
+        self.preprocessing = preprocessing
+        self.chip_info = []
+        self.prepare_chip_info()
+
+    def prepare_chip_info(self):
+        """ prepare chip_info """
+        for count in range(len(self.image_path_list)):
+            width, height = imagesize.get(self.image_path_list[count])
+            assert width >= self.chipsize and height >= self.chipsize,\
+                f"chipsize doesn't work for {self.image_path_list[count]} with size of ({height}, {width})"
+
+            list_i = np.unique(np.array(list(range(0, (height - self.chipsize), self.stride)) +
+                                        [height - self.chipsize, 0]))
+            list_j = np.unique(np.array(list(range(0, (width - self.chipsize), self.stride)) +
+                                        [width - self.chipsize, 0]))
+            for i in list_i:
+                for j in list_j:
+                    self.chip_info.append((count, i, j))
 
     def sampler(self):
-        """ yield indices of each batch """
-        indices = torch.tensor(range(len(self)))
-        if self.shuffle:
-            generator = torch.Generator()
-            generator.manual_seed(int((datetime.datetime.now().strftime("%Y%m%d%H%M%S"))))
-            indices = torch.randperm(len(self), generator=generator)
-        if self.drop_last and (len(self) % self.batch_size) != 0:
-            indices = indices[:-(len(self) % self.batch_size)]
-        for i in range(0, len(indices), self.batch_size):
-            yield indices[i: min(i + self.batch_size, len(self))]
+        """ start_index, end_index for chip images in self.chip_info """
+        for i in range(0, len(self), self.batch_size):
+            yield i, min(i + self.batch_size, len(self))
 
-    def fetcher(self, indices: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def fetcher(self, start_index: int, end_index: int):
         """
-        return images and labels of given indices, with possible preprocessing,
+        return chipped images of given indices, with possible preprocessing,
         in shape (batch_size, channel, height, width)
         """
-        images, labels = [], []
-        for index in indices:
-            image = self.load(self.image_path_list[index], "image")
-            label = self.load(self.label_path_list[index], "label")
+        chipped_images, info = [], []
+        chipped_info = self.chip_info[start_index: end_index]
+        # split chipped_info in terms of their whole image index
+        image_indices = np.unique(np.array(chipped_info)[:, 0])  # get whole image index
+        for image_index in image_indices:
+            info.append([])
+        for i in range(self.batch_size):
+            info[chipped_info[i][0] - min(image_indices)].append(chipped_info[i])
+        # load whole image and chip
+        for list in info:
+            image = self.load(self.image_path_list[list[0][0]])
             if self.preprocessing is not None:
-                image, label = self.preprocessing(image, label)
+                image = self.preprocessing(image)
             image = np.rollaxis(image, 2, 0)
-            images.append(torch.tensor(image, dtype=torch.float))
-            labels.append(torch.tensor(label, dtype=torch.int64))
-        return torch.stack(images, dim=0), torch.stack(labels, dim=0)
+            for index, height_coord, width_coord in list:
+                chipped_images.append(torch.tensor(
+                      image[:, height_coord: height_coord+self.chipsize, width_coord: width_coord+self.chipsize],
+                      dtype=torch.float))
+        return torch.stack(chipped_images, dim=0), np.array(chipped_info)
 
-    def load(self, path: str, mode: str):
-        """ load image/label
-        :return data: np.array
-        Note: image:(B, G, R) (height, width, channel) label: (height, width)
+    def stitcher(self, preds, info, last_batch_flag: bool = False):
+        """ stitch the preds together and return whole predicted image and its name
+        :param preds: predictions of chipped images
+        :param info: information of chipped images
+        :param last_batch_flag: if this is the last batch
+        """
+        # adding higher weights for pixels which are in the center, in order to mitigate edge effects
+        preds = np.array(preds)
+        info = np.array(info)
+        half_stride = self.stride // 2
+        kernel = np.ones((self.chipsize, self.chipsize), dtype=np.float32)
+        kernel[half_stride:-half_stride, half_stride:-half_stride] = 10
+
+        for i in range(info.shape[0]):
+            # initialisation for first batch
+            if self.current_image_index is None:
+                self.current_image_index = info[0, 0]
+                width, height = imagesize.get(self.image_path_list[self.current_image_index])
+                self.count = np.zeros([height, width])
+                self.whole_image = np.zeros([self.n_class, height, width])
+
+            if info[i, 0] == self.current_image_index:
+                # add chipped image to whole_image
+                self.whole_image[:, info[i, 1]: info[i, 1]+self.chipsize, info[i, 2]: info[i, 2]+self.chipsize] += \
+                    preds[i] * kernel
+                self.count[info[i, 1]: info[i, 1]+self.chipsize, info[i, 2]: info[i, 2]+self.chipsize] += kernel
+            else:
+                self.whole_image /= self.count
+                print("whole image")
+                yield self.whole_image  # return whole image that after stitching
+
+                # start to stitch new image
+                self.current_image_index = info[i, 0]
+                width, height = imagesize.get(self.image_path_list[self.current_image_index])
+                self.count = torch.zeros([height, width])
+                self.whole_image = torch.zeros([self.n_class, height, width])
+                self.whole_image[:, info[i, 1]: info[i, 1] + self.chipsize, info[i, 2]: info[i, 2] + self.chipsize] += \
+                    preds[i] * kernel
+                self.count[info[i, 1]: info[i, 1] + self.chipsize, info[i, 2]: info[i, 2] + self.chipsize] += kernel
+
+        if last_batch_flag is True:
+            self.whole_image /= self.count
+            yield self.whole_image
+
+
+
+
+
+
+
+
+
+
+
+
+    def load(self, path: str):
+        """ load image
+        Note: image (B, G, R), (height, width, channel), np.array
          """
         raise NotImplementedError
 
     def __iter__(self):
-        for indices in self.sampler():
-            yield self.fetcher(indices)
+        for start_index, end_index in self.sampler():
+            yield self.fetcher(start_index, end_index)
 
     def __len__(self):
-        assert len(self.image_path_list) == len(self.label_path_list),\
-            "image path list doesn't have the same len as label path list"
-        return len(self.image_path_list)
+        return len(self.chip_info)
 
 
 class PNGTestloader(ComputerVisionTestLoader):
     """ subclass to read and solve png files """
-    def __init__(self, image_path: str, label_path: str, batch_size: int = 1,
-                 drop_last: bool = False, shuffle: bool = False,
-                 preprocessing: Optional[Callable] = None):
-        super().__init__(image_path, label_path, batch_size, drop_last, shuffle, preprocessing)
 
-    def load(self, path: str, mode: str) -> np.array:
-        if mode == "image":
-            return cv2.imread(path)
-        if mode == "label":
-            tem = cv2.imread(path)[:, :, 2]
-            return tem
+    def __init__(self, image_path: str, chip_size: int, stride: int, n_class: int,
+                 batch_size: int = 1, preprocessing: Optional[Callable] = None):
+        super().__init__(image_path, chip_size, stride, n_class, batch_size, preprocessing)
+
+    def load(self, path: str) -> np.array:
+        # return data has form of B, G, R
+        return cv2.imread(path)
 
 
 class TIFFTestloader(ComputerVisionTestLoader):
     """ subclass to read and solve tiff tiles """
-    def __init__(self, image_path: str, label_path: str, batch_size: int = 1,
-                 drop_last: bool = False, shuffle: bool = False,
-                 preprocessing: Optional[Callable] = None):
-        super().__init__(image_path, label_path, batch_size, drop_last, shuffle, preprocessing)
+    def __init__(self, image_path: str, chip_size: int, stride: int, n_class: int,
+                 batch_size: int = 1, preprocessing: Optional[Callable] = None):
+        super().__init__(image_path, chip_size, stride, n_class, batch_size, preprocessing)
 
-    def load(self, path: str, mode: str) -> np.array:
+    def load(self, path: str) -> np.array:
         # return data has form of B, G, R
-        if mode == "image":
-            with rasterio.open(path) as file:
-                data = cv2.merge([file.read(3), file.read(2), file.read(1)])
-            return data
-        if mode == "label":
-            with rasterio.open(path) as file:
-                data = file.read(1)
-                return data
+        with rasterio.open(path) as file:
+            return cv2.merge([file.read(3), file.read(2), file.read(1)])
 
