@@ -20,7 +20,6 @@ import imagesize
 class ComputerVisionTestLoader:
     """ Base class for test loader for computer vision
     :param image_path: image path
-    :param chipsize: chip size when solve large images (chipsize, chipsize)
     :param stride: stride between two chipped images
     :param batch_size: how many samples per batch to load
     :param preprocessing: if not None, use preprocessing function after loading
@@ -38,9 +37,7 @@ class ComputerVisionTestLoader:
                  batch_size: int = 1, preprocessing: Optional[Callable] = None):
         self.image_name_list = []
         self.image_path_list = []
-        for image_name in os.listdir(image_path):
-            self.image_name_list.append(image_name)
-            self.image_path_list.append(os.path.join(image_path, image_name))
+        self.image_path = image_path
         self.chipsize = chip_size
         self.stride = stride
         self.n_class = n_class
@@ -51,6 +48,15 @@ class ComputerVisionTestLoader:
 
     def prepare_chip_info(self):
         """ prepare chip_info """
+        if not os.path.exists(self.image_path):
+            raise FileNotFoundError("testloader image path not exists")
+        elif len(os.listdir(self.image_path)) == 0:
+            raise FileNotFoundError("testloader image path is empty")
+
+        for image_name in os.listdir(self.image_path):
+            self.image_name_list.append(image_name)
+            self.image_path_list.append(os.path.join(self.image_path, image_name))
+
         for count in range(len(self.image_path_list)):
             width, height = imagesize.get(self.image_path_list[count])
             assert width >= self.chipsize and height >= self.chipsize,\
@@ -83,14 +89,14 @@ class ComputerVisionTestLoader:
         for i in range(self.batch_size):
             info[chipped_info[i][0] - min(image_indices)].append(chipped_info[i])
         # load whole image and chip
-        for list in info:
-            image = self.load(self.image_path_list[list[0][0]])
+        for element in info:
+            image = self.load(self.image_path_list[element[0][0]])
             if self.preprocessing is not None:
                 image = self.preprocessing(image)
             image = np.rollaxis(image, 2, 0)
-            for index, height_coord, width_coord in list:
+            for index, height_coord, width_coord in element:
                 chipped_images.append(torch.tensor(
-                      image[:, height_coord: height_coord+self.chipsize, width_coord: width_coord+self.chipsize],
+                      image[:, height_coord: height_coord + self.chipsize, width_coord: width_coord + self.chipsize],
                       dtype=torch.float))
         return torch.stack(chipped_images, dim=0), np.array(chipped_info)
 
@@ -101,12 +107,11 @@ class ComputerVisionTestLoader:
         :param last_batch_flag: if this is the last batch
         """
         # adding higher weights for pixels which are in the center, in order to mitigate edge effects
-        preds = np.array(preds)
+        preds = np.array(preds.detach().cpu())
         info = np.array(info)
         half_stride = self.stride // 2
         kernel = np.ones((self.chipsize, self.chipsize), dtype=np.float32)
         kernel[half_stride:-half_stride, half_stride:-half_stride] = 10
-
         for i in range(info.shape[0]):
             # initialisation for first batch
             if self.current_image_index is None:
@@ -122,8 +127,8 @@ class ComputerVisionTestLoader:
                 self.count[info[i, 1]: info[i, 1]+self.chipsize, info[i, 2]: info[i, 2]+self.chipsize] += kernel
             else:
                 self.whole_image /= self.count
-                print("whole image")
-                yield self.whole_image  # return whole image that after stitching
+                # return whole image that after stitching
+                yield self.whole_image, self.image_name_list[self.current_image_index]
 
                 # start to stitch new image
                 self.current_image_index = info[i, 0]
@@ -136,18 +141,7 @@ class ComputerVisionTestLoader:
 
         if last_batch_flag is True:
             self.whole_image /= self.count
-            yield self.whole_image
-
-
-
-
-
-
-
-
-
-
-
+            yield self.whole_image, self.image_name_list[self.current_image_index]
 
     def load(self, path: str):
         """ load image

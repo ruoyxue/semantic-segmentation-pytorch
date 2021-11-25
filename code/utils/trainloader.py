@@ -10,40 +10,52 @@ import os
 import datetime
 from typing import List, Callable, Optional, Tuple
 import rasterio
+import torch.nn as nn
+from torchvision import transforms
 
 
 class ComputerVisionTrainLoader:
     """ Base class for train loader for computer vision
     :param image_path: image path
-    :param label_path: label path
+    :param gt_path: label path
     :param batch_size: how many samples per batch to load
     :param drop_last: if True, drop the last incomplete batch,
     :param shuffle: if True, shuffle data in __iter__
-    :param preprocessing: if not None, use preprocessing function after loading
 
     Note: by default, we set image's name and label's name to be the same,
           it's suggested that you set your own way via method
           `prepare_image_name_list`
     """
-    def __init__(self, image_path: str, label_path: str, batch_size: int = 1,
+    def __init__(self, image_path: str, gt_path: str, batch_size: int = 1,
                  drop_last: bool = False, shuffle: bool = False,
-                 preprocessing: Optional[Callable] = None):
+                 preprocessing_flag: bool = False):
         self.image_path = image_path
-        self.label_path = label_path
+        self.gt_path = gt_path
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.shuffle = shuffle
-        self.preprocessing = preprocessing
+        self.preprocessing_flag = preprocessing_flag
         self.image_path_list = []
         self.label_path_list = []
+        self.normalisation = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(89.8, 91.3, 89.9), std=(68.0, 65.6, 66.4))
+        ])
         self.prepare_image_label_list()
 
     def prepare_image_label_list(self):
         """ save image's and label's absolute path correspondingly """
+        if not os.path.exists(self.image_path) or not os.path.exists(self.gt_path):
+            raise FileNotFoundError("trainloader image path or gt path not exists")
+        elif len(os.listdir(self.image_path)) == 0 or len(os.listdir(self.gt_path)) == 0:
+            raise FileNotFoundError("trainloader image path or gt path is empty")
+
         for image_name in os.listdir(self.image_path):
-            if os.path.exists(os.path.join(self.label_path, image_name)):
+            if os.path.exists(os.path.join(self.gt_path, image_name)):
                 self.image_path_list.append(os.path.join(self.image_path, image_name))
-                self.label_path_list.append(os.path.join(self.label_path, image_name))
+                self.label_path_list.append(os.path.join(self.gt_path, image_name))
+        assert len(self.image_path) > 0, \
+            "trainloader can't find images and labels to distribute, they must enjoy the same name"
 
     def sampler(self):
         """ yield indices of each batch """
@@ -66,10 +78,7 @@ class ComputerVisionTrainLoader:
         for index in indices:
             image = self.load(self.image_path_list[index], "image")
             label = self.load(self.label_path_list[index], "label")
-            if self.preprocessing is not None:
-                image, label = self.preprocessing(image, label)
-            image = np.rollaxis(image, 2, 0)
-            images.append(torch.tensor(image, dtype=torch.float))
+            images.append(self.normalisation(image))
             labels.append(torch.tensor(label, dtype=torch.int64))
         return torch.stack(images, dim=0), torch.stack(labels, dim=0)
 
@@ -92,33 +101,30 @@ class ComputerVisionTrainLoader:
 
 class PNGTrainloader(ComputerVisionTrainLoader):
     """ subclass to read and solve png files """
-    def __init__(self, image_path: str, label_path: str, batch_size: int = 1,
+    def __init__(self, image_path: str, gt_path: str, batch_size: int = 1,
                  drop_last: bool = False, shuffle: bool = False,
-                 preprocessing: Optional[Callable] = None):
-        super().__init__(image_path, label_path, batch_size, drop_last, shuffle, preprocessing)
+                 preprocessing_flag: bool = False):
+        super().__init__(image_path, gt_path, batch_size, drop_last, shuffle, preprocessing_flag)
 
     def load(self, path: str, mode: str) -> np.array:
         if mode == "image":
             return cv2.imread(path)
         if mode == "label":
-            tem = cv2.imread(path)[:, :, 2]
-            return tem
+            return cv2.imread(path)[:, :, 2]
 
 
 class TIFFTrainloader(ComputerVisionTrainLoader):
     """ subclass to read and solve tiff tiles """
-    def __init__(self, image_path: str, label_path: str, batch_size: int = 1,
+    def __init__(self, image_path: str, gt_path: str, batch_size: int = 1,
                  drop_last: bool = False, shuffle: bool = False,
-                 preprocessing: Optional[Callable] = None):
-        super().__init__(image_path, label_path, batch_size, drop_last, shuffle, preprocessing)
+                 preprocessing_flag: bool = False):
+        super().__init__(image_path, gt_path, batch_size, drop_last, shuffle, preprocessing_flag)
 
     def load(self, path: str, mode: str) -> np.array:
         # return data has form of B, G, R
         if mode == "image":
-            with rasterio.open(path) as file:
-                data = cv2.merge([file.read(3), file.read(2), file.read(1)])
-            return data
+            with rasterio.open(path) as data:
+                return cv2.merge([data.read(3), data.read(2), data.read(1)])
         if mode == "label":
-            with rasterio.open(path) as file:
-                data = file.read(1)
-                return data
+            with rasterio.open(path) as data:
+                return data.read(1)
