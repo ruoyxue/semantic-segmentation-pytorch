@@ -4,7 +4,7 @@
 # export CUDA_VISIBLE_DEVICES=0 # visible GPU device
 
 # change mode to choose either training 0 or testing 1
-mode=0;
+mode=1;
 
 if [ $mode -eq 0 ];
 then
@@ -16,7 +16,7 @@ python train.py \
 --batch_size 8 \
 --lr 0.1 \
 --device cuda:0 \
---train_data_path ../dataset/semantic_segmentation \
+--train_data_path ../dataset/semantic_segmentation/data_aug \
 --save_model_path ./save/model_saved/FCN8s \
 --check_point_path ./save/checkpoint_saved/FCN8s/checkpoint.pt \
 --check_point_mode save \
@@ -27,10 +27,13 @@ echo "------------Testing Process-------------"
 python test.py \
 --model fcn8s \
 --n_class 13 \
---batch_size 96 \
+--chip_size 256 \
+--stride 128 \
+--batch_size 4 \
 --device cuda:0 \
---test_data_path ../dataset/semantic_segmentation \
---load_model_path ./save/model_saved/MLP/model_epoch_30.pth \
+--test_data_path ../dataset/semantic_segmentation/original \
+--load_model_path ./save/model_saved/FCN8s/model_epoch_5.pth \
+--save_output_path ./save/prediction_saved/FCN8s
 
 fi
 exit 0
