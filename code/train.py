@@ -3,6 +3,7 @@ It is recommended that data augmentation is finished before training, which mean
 there wouldn't be any dynamic preprocessing in training process except normalisation.
 
 We provide simple data augmentation code in utils/data_augmentation.py
+TODO: add torch.jit.script
 """
 
 import datetime
@@ -28,7 +29,7 @@ def trainer(train_args: argparse):
                                       gt_path=os.path.join(train_args.train_data_path, "gt"),
                                       batch_size=train_args.batch_size, drop_last=True, shuffle=True)
     criterion = nn.CrossEntropyLoss()
-    evaluator = SegmentationEvaluator(true_label=range(12))
+    evaluator = SegmentationEvaluator(true_label=range(13))
     optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=2,
                                                      min_lr=1e-6, verbose=True)
@@ -50,9 +51,12 @@ def trainer(train_args: argparse):
         with tqdm(total=int(len(train_dataloader) / train_args.batch_size),
                   unit_scale=True, unit=" img", colour="cyan", ncols=60) as pbar:
             for i, (images, gts) in enumerate(train_dataloader):
+                # images (batch_size, channel, height, width)
+                # gts (batch_size, height, width)
                 images = images.to(train_args.device)
                 gts = gts.to(train_args.device)
                 optimizer.zero_grad()
+                # predictions (batch_size, n_class, height, width)
                 predictions = train_args.model(images)
                 loss = criterion(predictions, gts)
                 loss_ += loss

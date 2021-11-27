@@ -11,9 +11,9 @@ then
 echo "------------Training Process------------" 
 python train.py \
 --model fcn8s \
---epochs 30 \
+--epochs 10 \
 --n_class 13 \
---batch_size 8 \
+--batch_size 4 \
 --lr 0.1 \
 --device cuda:0 \
 --train_data_path ../dataset/semantic_segmentation/data_aug \
@@ -39,7 +39,7 @@ fi
 exit 0
 
 
-
+# -m torch.utils.bottleneck 
 
 
 

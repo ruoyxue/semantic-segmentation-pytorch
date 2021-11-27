@@ -1,7 +1,9 @@
 """
 Taking into consideration that pytorch dataset and dataloader
 seem to be clumsy for daily self-use, I would like to construct a
-specialised light-weight trainloader for data preparation
+specialised light-weight dataloader for training and testing
+
+TODO: add num_workers for data load parallelization
 """
 import numpy as np
 import torch

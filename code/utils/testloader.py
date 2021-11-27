@@ -3,8 +3,8 @@ Taking into consideration that pytorch dataset and dataloader
 seem to be clumsy for daily self-use, I would like to construct a
 specialised light-weight dataloader for training and testing
 
-TODO: need to adjust fetcher to make it more readable
 TODO: add num_workers for data load parallelization
+TODO: add single image prediction test dataloader
 """
 import logging
 import numpy as np
@@ -24,22 +24,30 @@ class ComputerVisionTestLoader:
     :param stride: stride between two chipped images
     :param batch_size: how many samples per batch to load
     :param preprocessing: if not None, use preprocessing function after loading
+    :param device: where to stitch images
 
     Note: we save all chip images information in self.chip_information in form of
           (image_index, height_coord, width_coord)
+
+    :cvar whole_image: record current corresponding image when stitching
+    :cvar current_image_index: record current image index
+    :cvar kernel: add higher weights for pixels which are in the center, in order to mitigate edge effects
+    :cvar count: accumulate all the weights kernel adds, in order to normalise at the end
     """
     whole_image: torch.tensor = None
-    count: torch.tensor = None
     current_image_index: int = None
+    kernel: torch.tensor = None
+    count: torch.tensor = None
 
-    def __init__(self, image_path: str, chip_size: int, stride: int, n_class: int,
+    def __init__(self, image_path: str, chip_size: int, stride: int, n_class: int, device,
                  batch_size: int = 1, preprocessing: Optional[Callable] = None):
-        self.image_name_list = []
         self.image_path_list = []
+        self.image_name_list = []
         self.image_path = image_path
         self.chipsize = chip_size
         self.stride = stride
         self.n_class = n_class
+        self.device = device
         self.batch_size = batch_size
         self.preprocessing = preprocessing
         self.chip_information = []
@@ -48,6 +56,10 @@ class ComputerVisionTestLoader:
             transforms.Normalize(mean=(89.8, 91.3, 89.9), std=(68.0, 65.6, 66.4))
         ])
         self.prepare_chip_information()
+        # kernel setting
+        self.kernel = torch.ones(self.chipsize, self.chipsize, dtype=torch.float32, device=self.device)
+        half_stride = self.stride // 2
+        self.kernel[half_stride:-half_stride, half_stride:-half_stride] = 10
 
     def prepare_chip_information(self):
         """ prepare chip information, saved in self.chip_information """
@@ -101,45 +113,38 @@ class ComputerVisionTestLoader:
 
         return torch.stack(distributed_images, dim=0), torch.tensor(chip_info)
 
-    def stitcher(self, preds: torch.Tensor, info, last_batch_flag: bool = False):
+    @torch.no_grad()
+    def stitcher(self, preds: torch.tensor, info: torch.tensor, last_batch_flag: bool = False):
         """ stitch the preds together and return whole predicted image and its name
-        :param preds: predictions of chipped images
-        :param info: information of chipped images
+        :param preds: predictions of chipped images (batch_size, n_class, height, width)
+        :param info: information of chipped images (batch_size, 3)
         :param last_batch_flag: if this is the last batch
+        :returns whole_image, image_name(torch.tensor on args.device)
         """
-        # adding higher weights for pixels which are in the center, in order to mitigate edge effects
-        preds = np.array(preds.detach().cpu())
-        info = np.array(info)
-        half_stride = self.stride // 2
-        kernel = np.ones((self.chipsize, self.chipsize), dtype=np.float32)
-        kernel[half_stride:-half_stride, half_stride:-half_stride] = 10
-
         # initialisation for first batch
         if self.current_image_index is None:
             self.current_image_index = info[0, 0]
             width, height = imagesize.get(self.image_path_list[self.current_image_index])
-            self.count = np.zeros([height, width])
-            self.whole_image = np.zeros([self.n_class, height, width])
+            self.count = torch.zeros(height, width, device=self.device)
+            self.whole_image = torch.zeros(self.n_class, height, width, device=self.device)
 
-        for i in range(info.shape[0]):
-            if info[i, 0] == self.current_image_index:
-                # add chipped image to whole_image
-                self.whole_image[:, info[i, 1]: info[i, 1]+self.chipsize, info[i, 2]: info[i, 2]+self.chipsize] += \
-                    preds[i] * kernel
-                self.count[info[i, 1]: info[i, 1]+self.chipsize, info[i, 2]: info[i, 2]+self.chipsize] += kernel
-            else:
+        for i in range(info.shape[0]):  # traverse every chipped image in batch
+            if info[i, 0] != self.current_image_index:
+                # if image_index alters, means former image has finished its stitching, return it
                 self.whole_image /= self.count
-                # return whole image that after stitching
                 yield self.whole_image, self.image_name_list[self.current_image_index]
 
-                # start to stitch new image
+                # start to stitch new image, new initialisation
                 self.current_image_index = info[i, 0]
                 width, height = imagesize.get(self.image_path_list[self.current_image_index])
-                self.count = torch.zeros([height, width])
-                self.whole_image = torch.zeros([self.n_class, height, width])
-                self.whole_image[:, info[i, 1]: info[i, 1] + self.chipsize, info[i, 2]: info[i, 2] + self.chipsize] += \
-                    preds[i] * kernel
-                self.count[info[i, 1]: info[i, 1] + self.chipsize, info[i, 2]: info[i, 2] + self.chipsize] += kernel
+                self.count = torch.zeros(height, width, device=self.device)
+                self.whole_image = torch.zeros(self.n_class, height, width, device=self.device)
+
+            # if image_index remains, add weighted chipped image to whole_image
+            self.whole_image[:, info[i, 1]: info[i, 1] + self.chipsize, info[i, 2]: info[i, 2] + self.chipsize] += \
+                preds[i] * self.kernel
+            self.count[info[i, 1]: info[i, 1] + self.chipsize, info[i, 2]: info[i, 2] + self.chipsize] += \
+                self.kernel
 
         if last_batch_flag is True:
             print("last image")
@@ -163,9 +168,9 @@ class ComputerVisionTestLoader:
 class PNGTestloader(ComputerVisionTestLoader):
     """ subclass to read and solve png files """
 
-    def __init__(self, image_path: str, chip_size: int, stride: int, n_class: int,
+    def __init__(self, image_path: str, chip_size: int, stride: int, n_class: int, device,
                  batch_size: int = 1, preprocessing: Optional[Callable] = None):
-        super().__init__(image_path, chip_size, stride, n_class, batch_size, preprocessing)
+        super().__init__(image_path, chip_size, stride, n_class, device,  batch_size, preprocessing)
 
     def load(self, path: str) -> np.array:
         # return data has form of B, G, R
@@ -174,9 +179,9 @@ class PNGTestloader(ComputerVisionTestLoader):
 
 class TIFFTestloader(ComputerVisionTestLoader):
     """ subclass to read and solve tiff tiles """
-    def __init__(self, image_path: str, chip_size: int, stride: int, n_class: int,
+    def __init__(self, image_path: str, chip_size: int, stride: int, n_class: int, device,
                  batch_size: int = 1, preprocessing: Optional[Callable] = None):
-        super().__init__(image_path, chip_size, stride, n_class, batch_size, preprocessing)
+        super().__init__(image_path, chip_size, stride, n_class, device,  batch_size, preprocessing)
 
     def load(self, path: str) -> np.array:
         # return data has form of B, G, R

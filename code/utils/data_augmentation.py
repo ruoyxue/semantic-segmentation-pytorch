@@ -70,9 +70,8 @@ def random_crop(image, label, chip_size: Union[int, Tuple[int, int]]):
     height, width = image.shape[:2]
     x = np.random.randint(0, height - chip_height)
     y = np.random.randint(0, width - chip_width)
-    chip_image = image[x:x + chip_height, y:y + chip_width]
-    chip_label = label[x:x + chip_height, y:y + chip_width]
-    return chip_image, chip_label
+    return image[x:x + chip_height, y:y + chip_width], \
+        label[x:x + chip_height, y:y + chip_width]
 
 
 def random_mosaic(image_list, label_list, size: int):
@@ -174,6 +173,10 @@ if __name__ == "__main__":
         os.makedirs(os.path.join(save_path, "image"))
     if not os.path.exists(os.path.join(save_path, "gt")):
         os.makedirs(os.path.join(save_path, "gt"))
+    if len(os.listdir(os.path.join(save_path, "image"))) != 0 or \
+       len(os.listdir(os.path.join(save_path, "gt"))) != 0:
+        raise FileExistsError("save path directory 'image' or 'gt' isn't empty")
+
 
     num = 0  # image saved count
     mosaic_image_list = []  # images for random mosaic
@@ -187,13 +190,13 @@ if __name__ == "__main__":
 
         if len(mosaic_image_list) == 4:
             num += 1
-            image_mosaic, label_mosaic = random_mosaic(mosaic_image_list, mosaic_label_list, 512)
+            image_mosaic, label_mosaic = random_mosaic(mosaic_image_list, mosaic_label_list, 256)
             mosaic_image_list.clear()
             mosaic_label_list.clear()
             cv2.imwrite(os.path.join(save_path, "image", "{}.png".format(num)), image_mosaic)
             cv2.imwrite(os.path.join(save_path, "gt", "{}.png".format(num)), label_mosaic)
 
-        img, gt = random_crop(img, gt, 512)
+        img, gt = random_crop(img, gt, 256)
         random_angle = np.random.choice([0, 90, 180, 270])
         random_flip = np.random.choice([-1, 0, 1])
         img, gt = rotate(img, gt, random_angle)

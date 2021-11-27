@@ -1,8 +1,15 @@
+"""
+Compute evaluation metrics for both training and testing process
+
+TODO: put all operations on gpu instead of cpu
+TODO: add other metrics for segmentation
+"""
+
 import numpy as np
 import torch
 from sklearn.metrics import f1_score, recall_score, precision_score, confusion_matrix, cohen_kappa_score
 import logging
-from typing import List
+from typing import List, Union
 
 
 class Evaluator:
@@ -17,7 +24,8 @@ class Evaluator:
     def clear(self):
         """ Clear metrics and count """
         self.count = 0
-        self.metrics.clear()
+        for key in self.metrics.keys():
+            self.metrics[key] = 0
 
     def log_metrics(self):
         """ Print metrics using logging.info """
@@ -57,47 +65,46 @@ class SegmentationEvaluator(Evaluator):
     """ Evaluator for segmentation task
     :param true_label: list of true labels, e.g. [0, 1, 2, 3, 4]
     """
-    def __init__(self, true_label):
+    def __init__(self, true_label: Union[List, range]):
         super().__init__()
         self.true_label = true_label
+        self.metrics.update(miou=0)
 
-    def accumulate(self, preds: torch.Tensor, labels: torch.Tensor):
+    @torch.no_grad()
+    def accumulate(self, preds: torch.tensor, gts: torch.tensor):
         """
         :param preds: predictions (batch_size, height, width)
-        :param labels: labels (batch_size, height, width)
+        :param gts: labels (batch_size, height, width)
         """
-        assert preds.shape == labels.shape,\
+        assert preds.shape == gts.shape,\
             "evaluator preds.shape != labels.shape"
-        preds = preds.detach().cpu().numpy()
-        labels = labels.detach().cpu().numpy()
-        n = preds.shape[0]
-        for i in range(n):
+        if preds.dim() == 3 and gts.dim() == 3:  # (batch_size, height, width) for training
+            n = preds.shape[0]
+            for i in range(n):
+                self.count += 1
+                self.metrics["miou"] += self.mean_iou(preds[i, :, :], gts[i, :, :])
+        elif preds.dim() == 2 and gts.dim() == 2:  # (height, width) for testing
             self.count += 1
-            if self.count == 1:
-                self.metrics["miou"] = self.mean_iou(preds[i, :, :], labels[i, :, :])
-                self.metrics["kappa"] = self.kappa(preds[i, :, :], labels[i, :, :])
-            else:
-                self.metrics["miou"] += self.mean_iou(preds[i, :, :], labels[i, :, :])
-                self.metrics["kappa"] += self.kappa(preds[i, :, :], labels[i, :, :])
+            self.metrics["miou"] += self.mean_iou(preds, gts)
 
     def log_metrics(self):
         miou = round(self.metrics["miou"] / self.count, 4)
-        kappa = round(self.metrics["kappa"] / self.count, 4)
-        logging.info(f"miou: {miou}    kappa: {kappa}")
+        # kappa = round(self.metrics["kappa"] / self.count, 4)
+        logging.info(f"miou: {miou}")
 
     @staticmethod
-    def iou(pred, label, pos_label: int) -> float:
+    def iou(pred: torch.tensor, label: torch.tensor, pos_label: int) -> float:
         """ compute iou for binary problems
         :param pred: 2d tensor, prediction
         :param label: 2d tensor, label
         :param pos_label: take pos_label as positive label, others as negative
         :return miou: float, iou
         """
-        intersection = np.logical_and(pred == pos_label, label == pos_label)
-        union = np.logical_or(pred == pos_label, label == pos_label)
-        return np.sum(intersection) / (np.sum(union) + 1)
+        intersection = torch.logical_and(pred == pos_label, label == pos_label)
+        union = torch.logical_or(pred == pos_label, label == pos_label)
+        return (torch.sum(intersection) / (torch.sum(union) + 1)).item()
 
-    def mean_iou(self, pred, label):
+    def mean_iou(self, pred: torch.tensor, label: torch.tensor):
         """ compute mean iou
         :param pred: 2d tensor, prediction
         :param label: 2d tensor, label
@@ -108,7 +115,7 @@ class SegmentationEvaluator(Evaluator):
             miou += self.iou(pred, label, pos_label=i)
         return miou / len(self.true_label)
 
-    def kappa(self, pred, label):
+    def kappa(self, pred: torch.tensor, label: torch.tensor):
         """ compute kappa coefficient
         :param pred: 2d tensor, prediction
         :param label: 2d tensor, label
