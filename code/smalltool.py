@@ -3,7 +3,8 @@ import os
 import math
 import numpy as np
 import time
-
+import shutil
+from tqdm import tqdm
 
 def label_category_find():
     # calculate all the categories of label
@@ -85,3 +86,106 @@ def compute_rgb_mean_std(image_path: str):
 
     end = time.time()
     print("total time is ", format(end - start, '.2f'), " s\n")
+
+
+def data_clean():
+    """ we put messy data into image and gt, with same name """
+    data_path = "/data/xueruoyao/road_extraction/deepglobe/train"
+    save_path ="/data/xueruoyao/road_extraction/deepglobe/clean"
+    if not os.path.exists(os.path.join(save_path)):
+        os.makedirs(os.path.join(save_path, "image"))
+        os.makedirs(os.path.join(save_path, "gt"))
+    assert len(os.listdir(os.path.join(save_path, "image"))) == 0 and \
+           len(os.listdir(os.path.join(save_path, "gt"))) == 0, \
+           "data clean save path train not empty"
+    print("data clean")
+    image_name_list = []
+    for name in os.listdir(data_path):
+        if name.split(".")[-1] == "jpg":
+            image_name_list.append(name)
+
+    with tqdm(total=len(image_name_list)) as pbar:
+        for image_name in image_name_list:
+            clean_name = image_name.split("_")[0]
+            image = cv2.imread(os.path.join(data_path, image_name))
+            cv2.imwrite(os.path.join(save_path, "image", clean_name + ".png"), image)
+            gt = cv2.imread(os.path.join(data_path, clean_name + "_mask.png"))
+            cv2.imwrite(os.path.join(save_path, "gt", clean_name + ".png"), gt)
+            pbar.update()
+
+    print("clean data: image sum = {}, gt sum = {}".format(
+        len(os.listdir(os.path.join(save_path, "image"))),
+        len(os.listdir(os.path.join(save_path, "gt")))
+    ))
+
+
+def data_split():
+    """ split data into train, valid and test, all has the form of
+    image and gt. Image and gt has same name """
+    image_path = "/data/xueruoyao/road_extraction/deepglobe/clean/image"
+    gt_path = "/data/xueruoyao/road_extraction/deepglobe/clean/gt"
+    save_path = "/data/xueruoyao/road_extraction/deepglobe/new"
+    split_ratio = (0.6, 0.2, 0.2)  # train, valid, test
+    image_name_list = os.listdir(image_path)
+    assert sum(split_ratio) == 1, f"expect split ratio sum = 1, got {sum(split_ratio)}"
+
+    # prepare directories for different data utility
+    if split_ratio[0] != 0:
+        if not os.path.exists(os.path.join(save_path, "train")):
+            os.makedirs(os.path.join(save_path, "train", "image"))
+            os.makedirs(os.path.join(save_path, "train", "gt"))
+        assert len(os.listdir(os.path.join(save_path, "train", "image"))) == 0 and \
+               len(os.listdir(os.path.join(save_path, "train", "gt"))) == 0,\
+               "data split save path train not empty"
+    if split_ratio[1] != 0:
+        if not os.path.exists(os.path.join(save_path, "valid")):
+            os.makedirs(os.path.join(save_path, "valid", "image"))
+            os.makedirs(os.path.join(save_path, "valid", "gt"))
+        assert len(os.listdir(os.path.join(save_path, "valid", "image"))) == 0 and \
+               len(os.listdir(os.path.join(save_path, "valid", "gt"))) == 0, \
+               "data split save path valid not empty"
+    if split_ratio[2] != 0:
+        if not os.path.exists(os.path.join(save_path, "test")):
+            os.makedirs(os.path.join(save_path, "test", "image"))
+            os.makedirs(os.path.join(save_path, "test", "gt"))
+        assert len(os.listdir(os.path.join(save_path, "test", "image"))) == 0 and \
+               len(os.listdir(os.path.join(save_path, "test", "gt"))) == 0, \
+               "data split save path test not empty"
+
+    print("data split")
+    tem_train = int(split_ratio[0] * len(image_name_list))
+    tem_valid = tem_train + int(split_ratio[1] * len(image_name_list))
+    with tqdm(total=len(image_name_list)) as pbar:
+        # train data
+        for image_name in image_name_list[:tem_train]:
+            shutil.copy2(os.path.join(image_path, image_name),
+                         os.path.join(save_path, "train", "image", image_name))
+            shutil.copy2(os.path.join(gt_path, image_name),
+                         os.path.join(save_path, "train", "gt", image_name))
+            pbar.update()
+
+        # valid data
+        for image_name in image_name_list[tem_train:tem_valid]:
+            shutil.copy2(os.path.join(image_path, image_name),
+                         os.path.join(save_path, "valid", "image", image_name))
+            shutil.copy2(os.path.join(gt_path, image_name),
+                         os.path.join(save_path, "valid", "gt", image_name))
+            pbar.update()
+
+        # test data
+        for image_name in image_name_list[tem_valid:]:
+            shutil.copy2(os.path.join(image_path, image_name),
+                         os.path.join(save_path, "test", "image", image_name))
+            shutil.copy2(os.path.join(gt_path, image_name),
+                         os.path.join(save_path, "test", "gt", image_name))
+            pbar.update()
+    print("train: {}, valid: {}, test: {}".format(
+        len(os.listdir(os.path.join(save_path, "train", "image"))) if split_ratio[0] != 0 else 0,
+        len(os.listdir(os.path.join(save_path, "valid", "image"))) if split_ratio[1] != 0 else 0,
+        len(os.listdir(os.path.join(save_path, "test", "image"))) if split_ratio[2] != 0 else 0
+    ))
+
+
+if __name__ == "__main__":
+    # data_clean()
+    data_split()
