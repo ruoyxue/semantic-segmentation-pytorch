@@ -3,12 +3,29 @@ import logging
 import torch
 import argparse
 from models import *
+import copy
+
+
+def get_logger(save_path):
+    """ get logger which output in both terminal and save in file """
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    terminal_handler = logging.StreamHandler()
+    terminal_handler.setFormatter(logging.Formatter("%(message)s"))
+    terminal_handler.setLevel(logging.DEBUG)
+    file_handler = logging.FileHandler(filename=save_path)
+    file_handler.setFormatter(logging.Formatter("%(message)s"))
+    file_handler.setLevel(logging.INFO)
+    logger.addHandler(terminal_handler)
+    logger.addHandler(file_handler)
+    return logger
 
 
 class Args:
     def __init__(self):
         self.args = self.get_args()
-        self.log_arg()
+        self.origin = copy.deepcopy(vars(self.args))  # save original config
+        # self.log_arg()
         self.args = self.analyse_args()
 
     def get_args(self):
@@ -39,23 +56,29 @@ class TrainArgs(Args):
         parser = argparse.ArgumentParser(description="Training Process")
         parser.add_argument("--model", type=str, required=True, help="Model to be used")
         parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
+        parser.add_argument("--random_seed", type=int, help="random seed")
         parser.add_argument("--n_class", type=int, default=2, help="Label categories")
         parser.add_argument("--batch_size", type=int, default=1, help="Batch size")
         parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate")
         parser.add_argument("--device", type=str, default="cpu", help="Device for training")
+        parser.add_argument("--exp_train_path", type=str, required=True,
+                            help="Path for saving train experiment info")
         parser.add_argument("--train_data_path", type=str, required=True,
                             help="Path for training data, with dir 'image' and 'gt'")
-        parser.add_argument("--save_model_path", type=str, required=True, help="Path for saving trained model")
-        parser.add_argument("--check_point_path", type=str, default="../check_point", help="Path for saving checkpoint")
-        parser.add_argument("--check_point_mode", type=str, default="none", help="two mode 'save', 'load'")
+        parser.add_argument("--save_model_path", type=str, required=True,
+                            help="Path for saving trained model")
+        parser.add_argument("--check_point_path", type=str, default="../check_point",
+                            help="Path for saving checkpoint")
+        parser.add_argument("--check_point_mode", type=str, default="none",
+                            help="two mode 'save', 'load'")
         return parser.parse_args()
 
     def analyse_args(self):
         # model
         valid_model = ["unet", "mlp", "fcn32s", "fcn16s", "fcn8s"]
         if self.args.model not in valid_model:
-            raise AssertionError("Invalid args['model'] : " + "expect model in " +
-                                 str(valid_model) + ", got '" + repr(self.args.model) + "'")
+            raise AssertionError(f"Invalid args['model']: expect model in {str(valid_model)}, "
+                                 f"got {repr(self.args.model)}")
         else:
             if self.args.model == "unet":
                 self.args.model = UNet()
@@ -85,7 +108,7 @@ class TrainArgs(Args):
         elif torch.cuda.is_available():
             self.args.device = torch.device(self.args.device)
         else:
-            raise RuntimeError("Invalid args['device'] : got '" + repr(self.args.device) + "'")
+            raise RuntimeError(f"Invalid args['device'] : got {repr(self.args.device)}")
 
         # train_data_path
         if not os.path.exists(os.path.join(self.args.train_data_path, "image")) or \
@@ -100,7 +123,14 @@ class TrainArgs(Args):
         if not os.path.exists(self.args.save_model_path):
             os.makedirs(self.args.save_model_path)
         if len(os.listdir(self.args.save_model_path)) != 0:
-            raise RuntimeError("Save model directory '" + self.args.save_model_path + "' is not empty")
+            raise RuntimeError(f"Save model directory {self.args.save_model_path} is not empty")
+
+        # exp_train_path
+        if not os.path.exists(self.args.exp_train_path):
+            os.makedirs(self.args.exp_train_path)
+        for root, dirs, files in os.walk(os.path.join(self.args.exp_train_path)):
+            if files:
+                raise RuntimeError("exp train path {} has files".format(self.args.exp_train_path))
 
         return self.args
 
@@ -119,8 +149,12 @@ class TestArgs(Args):
         parser.add_argument("--device", type=str, default="cpu", help="Device for training")
         parser.add_argument("--test_data_path", type=str, required=True,
                             help="Path for testing data, with dir 'image' and 'label'")
-        parser.add_argument("--load_model_path", type=str, required=True, help="Path for loading trained model")
-        parser.add_argument("--save_output_path", type=str, required=True, help="Path for saving model predictions")
+        parser.add_argument("--exp_test_path", type=str, required=True,
+                            help="Path for saving test experiment info")
+        parser.add_argument("--load_model_path", type=str, required=True,
+                            help="Path for loading trained model")
+        parser.add_argument("--save_output_path", type=str, required=True,
+                            help="Path for saving model predictions")
         return parser.parse_args()
 
     def analyse_args(self):
@@ -140,7 +174,6 @@ class TestArgs(Args):
                 self.args.model = FCN16s(self.args.n_class)
             if self.args.model == "fcn8s":
                 self.args.model = FCN8s(self.args.n_class)
-
         # device
         if torch.cuda.is_available():
             self.args.device = torch.device(self.args.device)

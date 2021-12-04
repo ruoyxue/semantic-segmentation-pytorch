@@ -2,7 +2,7 @@
 Compute evaluation metrics for both training and testing process
 
 TODO: put all operations on gpu instead of cpu
-TODO: add other metrics for segmentation
+TODO: add other metrics for segmentation, kappa
 """
 
 import numpy as np

@@ -114,7 +114,7 @@ class ComputerVisionTestLoader:
         return torch.stack(distributed_images, dim=0), torch.tensor(chip_info)
 
     @torch.no_grad()
-    def stitcher(self, preds: torch.tensor, info: torch.tensor, last_batch_flag: bool = False):
+    def stitcher(self, preds: torch.tensor, info: torch.tensor, last_batch_flag: bool):
         """ stitch the preds together and return whole predicted image and its name
         :param preds: predictions of chipped images (batch_size, n_class, height, width)
         :param info: information of chipped images (batch_size, 3)
@@ -147,7 +147,6 @@ class ComputerVisionTestLoader:
                 self.kernel
 
         if last_batch_flag is True:
-            print("last image")
             self.whole_image /= self.count
             yield self.whole_image, self.image_name_list[self.current_image_index]
 
