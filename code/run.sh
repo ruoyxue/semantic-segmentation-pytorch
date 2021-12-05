@@ -21,7 +21,7 @@ python train.py \
 --save_model_path /data/xueruoyao/experiment/road_extraction/deepglobe/FCN8s/train/model_saved \
 --exp_train_path /data/xueruoyao/experiment/road_extraction/deepglobe/FCN8s/train \
 --check_point_path /data/xueruoyao/experiment/road_extraction/deepglobe/FCN8s/train/checkpoint_saved/checkpoint.pt \
---check_point_mode save \
+--check_point_mode load \
 
 elif [ $mode -eq 1 ];
 then

@@ -131,17 +131,19 @@ class TrainArgs(Args):
             raise FileNotFoundError("Valid data directory '" + self.args.valid_data_path + "' is empty")
 
         # save_model_path
-        if not os.path.exists(self.args.save_model_path):
-            os.makedirs(self.args.save_model_path)
-        if len(os.listdir(self.args.save_model_path)) != 0:
-            raise RuntimeError(f"Save model directory {self.args.save_model_path} is not empty")
+        if self.args.check_point_mode != "load":
+            if not os.path.exists(self.args.save_model_path):
+                os.makedirs(self.args.save_model_path)
+            if len(os.listdir(self.args.save_model_path)) != 0:
+                raise RuntimeError(f"Save model directory {self.args.save_model_path} is not empty")
 
         # exp_train_path
-        if not os.path.exists(self.args.exp_train_path):
-            os.makedirs(self.args.exp_train_path)
-        for root, dirs, files in os.walk(os.path.join(self.args.exp_train_path)):
-            if files:
-                raise RuntimeError("exp train path {} has files".format(self.args.exp_train_path))
+        if self.args.check_point_mode != "load":
+            if not os.path.exists(self.args.exp_train_path):
+                os.makedirs(self.args.exp_train_path)
+            for root, dirs, files in os.walk(os.path.join(self.args.exp_train_path)):
+                if files:
+                    raise RuntimeError("exp train path {} has files".format(self.args.exp_train_path))
 
         return self.args
 

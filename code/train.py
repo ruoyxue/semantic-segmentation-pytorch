@@ -76,7 +76,7 @@ def trainer(train_args: argparse, logger):
     criterion = nn.CrossEntropyLoss()
     evaluator = SegmentationEvaluator(true_label=range(train_args.n_class))
     optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=2,
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5,
                                                      min_lr=1e-6, verbose=True)
     with open(os.path.join(Args.args.exp_train_path, "config.yml"), "a") as f:
         yaml.dump({"optimizer": {"name": "SGD", "state_dict": optimizer.state_dict()}}, f)
@@ -146,12 +146,13 @@ def trainer(train_args: argparse, logger):
 
 if __name__ == "__main__":
     Args = TrainArgs()
-    save_script(Args.args.exp_train_path)
     torch.manual_seed(Args.args.random_seed)
     logger = get_logger(os.path.join(Args.args.exp_train_path, "log.txt"))
-    with open(os.path.join(Args.args.exp_train_path, "config.yml"), "a") as f:
-        yaml.dump({"args": Args.origin}, f, Dumper=yaml.RoundTripDumper)
-        f.write("\n")
+    if Args.args.check_point_mode != "load":
+        save_script(Args.args.exp_train_path)
+        with open(os.path.join(Args.args.exp_train_path, "config.yml"), "a") as f:
+            yaml.dump({"args": Args.origin}, f, Dumper=yaml.RoundTripDumper)
+            f.write("\n")
 
     trainer(Args.args, logger)
 
