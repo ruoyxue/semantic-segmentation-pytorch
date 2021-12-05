@@ -123,6 +123,7 @@ info_dict = {
 # logger.addHandler(terminal_handler)
 # logger.addHandler(file_handler)
 # logging.info("info hello")
-a = [1]
-if not a:
-    print("false")
+print(torch.cuda.is_available())
+a = torch.tensor(5)
+a.cuda()
+print(a)

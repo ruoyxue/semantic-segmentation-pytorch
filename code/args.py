@@ -65,6 +65,8 @@ class TrainArgs(Args):
                             help="Path for saving train experiment info")
         parser.add_argument("--train_data_path", type=str, required=True,
                             help="Path for training data, with dir 'image' and 'gt'")
+        parser.add_argument("--valid_data_path", type=str, required=True,
+                            help="Path for valid data, with dir 'image' and 'gt'")
         parser.add_argument("--save_model_path", type=str, required=True,
                             help="Path for saving trained model")
         parser.add_argument("--check_point_path", type=str, default="../check_point",
@@ -118,6 +120,15 @@ class TrainArgs(Args):
         if len(os.listdir(os.path.join(self.args.train_data_path, "image"))) == 0 or \
            len(os.listdir(os.path.join(self.args.train_data_path, "gt"))) == 0:
             raise FileNotFoundError("Train data directory '" + self.args.train_data_path + "' is empty")
+
+        # valid_data_path
+        if not os.path.exists(os.path.join(self.args.valid_data_path, "image")) or \
+           not os.path.exists(os.path.join(self.args.valid_data_path, "gt")):
+            raise FileNotFoundError("Invalid valid_data_path, directory '" + self.args.valid_data_path +
+                                    "'does not includes 'image' and 'gt'")
+        if len(os.listdir(os.path.join(self.args.valid_data_path, "image"))) == 0 or \
+           len(os.listdir(os.path.join(self.args.valid_data_path, "gt"))) == 0:
+            raise FileNotFoundError("Valid data directory '" + self.args.valid_data_path + "' is empty")
 
         # save_model_path
         if not os.path.exists(self.args.save_model_path):
@@ -187,7 +198,7 @@ class TestArgs(Args):
                                     "'does not includes 'image' and 'gt'")
         if len(os.listdir(os.path.join(self.args.test_data_path, "image"))) == 0 or \
            len(os.listdir(os.path.join(self.args.test_data_path, "gt"))) == 0:
-            raise FileNotFoundError("Train data directory '" + self.args.test_data_path + "' is empty")
+            raise FileNotFoundError("Test data directory '" + self.args.test_data_path + "' is empty")
 
         # load_model_path
         if not os.path.exists(self.args.load_model_path):

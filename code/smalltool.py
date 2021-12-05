@@ -5,6 +5,8 @@ import numpy as np
 import time
 import shutil
 from tqdm import tqdm
+import imagesize
+
 
 def label_category_find():
     # calculate all the categories of label
@@ -18,30 +20,30 @@ def label_category_find():
     print(np.unique(np.array(labels)))
 
 
-def compute_rgb_mean_std(image_path: str):
+def compute_rgb_mean_std():
     """ calculate mean and std of R, G, B channel"""
-    num = 0  # image sum
+    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
+
     R_mean, R_std = [], []
     G_mean, G_std = [], []
     B_mean, B_std = [], []
     size = []  # pixels of every image
     sum_size = 0  # 记录所有图片总像素
-    start = time.time()
-    for image_name in os.listdir(image_path):
-        rgb_img = cv2.imread(os.path.join(image_path, image_name))
-        B, G, R = rgb_img[:, :, 0], rgb_img[:, :, 1], rgb_img[:, :, 2]
-        size.append(len(B))
-        sum_size = sum_size + len(B)
-        R_mean.append(np.mean(R))
-        R_std.append(np.std(R))
-        G_mean.append(np.mean(G))
-        G_std.append(np.std(G))
-        B_mean.append(np.mean(B))
-        B_std.append(np.std(B))
-        num = num + 1
-        if num % 50 == 0:
-            print("num = {}".format(num))
+    with tqdm(total=len(os.listdir(image_path)), unit=" img") as pbar:
+        for image_name in os.listdir(image_path):
+            rgb_img = cv2.imread(os.path.join(image_path, image_name))
+            B, G, R = rgb_img[:, :, 0], rgb_img[:, :, 1], rgb_img[:, :, 2]
+            size.append(len(B))
+            sum_size = sum_size + len(B)
+            R_mean.append(np.mean(R))
+            R_std.append(np.std(R))
+            G_mean.append(np.mean(G))
+            G_std.append(np.std(G))
+            B_mean.append(np.mean(B))
+            B_std.append(np.std(B))
+            pbar.update()
 
+    num = len(os.listdir(image_path))
     # R_mean
     tem = 0
     for i in range(num):
@@ -84,14 +86,11 @@ def compute_rgb_mean_std(image_path: str):
     B_std_final = math.sqrt(tem / sum_size)
     print("B_std:", B_std_final)
 
-    end = time.time()
-    print("total time is ", format(end - start, '.2f'), " s\n")
-
 
 def data_clean():
-    """ we put messy data into image and gt, with same name """
-    data_path = "/data/xueruoyao/road_extraction/deepglobe/train"
-    save_path ="/data/xueruoyao/road_extraction/deepglobe/clean"
+    """ we put messy data into image and gt, perform label transform, with same name """
+    data_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/original"
+    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/clean"
     if not os.path.exists(os.path.join(save_path)):
         os.makedirs(os.path.join(save_path, "image"))
         os.makedirs(os.path.join(save_path, "gt"))
@@ -99,18 +98,19 @@ def data_clean():
            len(os.listdir(os.path.join(save_path, "gt"))) == 0, \
            "data clean save path train not empty"
     print("data clean")
-    image_name_list = []
-    for name in os.listdir(data_path):
-        if name.split(".")[-1] == "jpg":
-            image_name_list.append(name)
+    image_name_list = os.listdir(os.path.join(data_path, "image"))
+    # for name in os.listdir(data_path):
+    #     if name.split(".")[-1] == "jpg":
+    #         image_name_list.append(name)
 
-    with tqdm(total=len(image_name_list)) as pbar:
+    with tqdm(total=len(image_name_list), unit=" img") as pbar:
         for image_name in image_name_list:
             clean_name = image_name.split("_")[0]
-            image = cv2.imread(os.path.join(data_path, image_name))
-            cv2.imwrite(os.path.join(save_path, "image", clean_name + ".png"), image)
-            gt = cv2.imread(os.path.join(data_path, clean_name + "_mask.png"))
-            cv2.imwrite(os.path.join(save_path, "gt", clean_name + ".png"), gt)
+            image = cv2.imread(os.path.join(data_path, "image", image_name))
+            cv2.imwrite(os.path.join(save_path, "image", image_name), image)
+            gt = cv2.imread(os.path.join(data_path, "gt", image_name))
+            gt[gt == 255] = 1
+            cv2.imwrite(os.path.join(save_path, "gt", image_name), gt)
             pbar.update()
 
     print("clean data: image sum = {}, gt sum = {}".format(
@@ -122,9 +122,9 @@ def data_clean():
 def data_split():
     """ split data into train, valid and test, all has the form of
     image and gt. Image and gt has same name """
-    image_path = "/data/xueruoyao/road_extraction/deepglobe/clean/image"
-    gt_path = "/data/xueruoyao/road_extraction/deepglobe/clean/gt"
-    save_path = "/data/xueruoyao/road_extraction/deepglobe/new"
+    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
+    gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/gt"
+    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/new"
     split_ratio = (0.6, 0.2, 0.2)  # train, valid, test
     image_name_list = os.listdir(image_path)
     assert sum(split_ratio) == 1, f"expect split ratio sum = 1, got {sum(split_ratio)}"
@@ -155,7 +155,7 @@ def data_split():
     print("data split")
     tem_train = int(split_ratio[0] * len(image_name_list))
     tem_valid = tem_train + int(split_ratio[1] * len(image_name_list))
-    with tqdm(total=len(image_name_list)) as pbar:
+    with tqdm(total=len(image_name_list), unit=" img") as pbar:
         # train data
         for image_name in image_name_list[:tem_train]:
             shutil.copy2(os.path.join(image_path, image_name),
@@ -186,6 +186,19 @@ def data_split():
     ))
 
 
+def statistic_image_size():
+    """ count unique image size """
+    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/original/image"
+    image_size_list = []
+    for image_name in os.listdir(image_path):
+        width, height = imagesize.get(os.path.join(image_path, image_name))
+        if (height, width) not in image_size_list:
+            image_size_list.append((height, width))
+    print(image_size_list)
+
+
 if __name__ == "__main__":
     # data_clean()
     data_split()
+    # statistic_image_size()
+    # compute_rgb_mean_std()

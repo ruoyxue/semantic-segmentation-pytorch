@@ -5,6 +5,8 @@ there wouldn't be any dynamic preprocessing in training process except normalisa
 We provide simple data augmentation code in utils/data_augmentation.py
 TODO: add torch.jit.script
 TODO: add tensorboard visualisation
+TODO: add warm-up to optimizer
+TODO: add valid dataset
 """
 
 import datetime
@@ -19,8 +21,7 @@ import torch
 from torch import optim, nn
 from args import TrainArgs, get_logger
 import argparse
-from utils import ClassificationEvaluator, SegmentationEvaluator
-from utils import PNGTrainloader, TIFFTrainloader
+from utils import PNGTrainloader, PNGTestloader, SegmentationEvaluator
 from ruamel import yaml
 import shutil
 
@@ -37,6 +38,35 @@ def save_script(save_path):
                 shutil.rmtree(os.path.join(root, d))
 
 
+@torch.no_grad()
+def valider(train_args: argparse, logger):
+    """ use train model to test valid data and give metrics """
+    logger.info("validation")
+    train_args.model.eval()
+    test_dataloader = PNGTestloader(image_path=os.path.join(train_args.valid_data_path, "image"),
+                                    chip_size=512, stride=256,
+                                    n_class=train_args.n_class, batch_size=train_args.batch_size,
+                                    device=train_args.device)
+    evaluator = SegmentationEvaluator(true_label=range(train_args.n_class))
+
+    max_batch_num = np.ceil(len(test_dataloader) / train_args.batch_size)
+    last_batch_flag = False
+    with tqdm(total=max_batch_num, unit_scale=True, unit=" batch", colour="cyan", ncols=60) as pbar:
+        for i, (data, info) in enumerate(test_dataloader):
+            data = data.to(train_args.device)  # data (batch_size, channels, height, width)
+            preds = train_args.model(data)  # preds (batch_size, n_class, height, width)
+            if i == (max_batch_num - 1):
+                last_batch_flag = True
+            for whole_label, image_name in test_dataloader.stitcher(preds, info, last_batch_flag):
+                # before: whole label (n_class, height, width)
+                whole_label = torch.argmax(whole_label, dim=0)
+                # after: whole label (height, width)
+                gt = torch.tensor(cv2.imread(os.path.join(train_args.valid_data_path, "gt", image_name))[:, :, 0])
+                evaluator.accumulate(whole_label, gt.to(train_args.device))
+            pbar.update()
+    evaluator.log_metrics()
+
+
 def trainer(train_args: argparse, logger):
     # 1. -------------Prepare dataloader, optimizer, scheduler, loss, evaluator---------------------------
     train_args.model.to(train_args.device)
@@ -44,7 +74,7 @@ def trainer(train_args: argparse, logger):
                                       gt_path=os.path.join(train_args.train_data_path, "gt"),
                                       batch_size=train_args.batch_size, drop_last=True, shuffle=True)
     criterion = nn.CrossEntropyLoss()
-    evaluator = SegmentationEvaluator(true_label=range(13))
+    evaluator = SegmentationEvaluator(true_label=range(train_args.n_class))
     optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=2,
                                                      min_lr=1e-6, verbose=True)
@@ -71,7 +101,7 @@ def trainer(train_args: argparse, logger):
             logging.info(datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"))
         loss_ = torch.tensor([0], dtype=torch.float32, device=train_args.device)
         with tqdm(total=int(len(train_dataloader) / train_args.batch_size),
-                  unit_scale=True, unit=" img", colour="cyan", ncols=60) as pbar:
+                  unit_scale=True, unit=" batch", colour="cyan", ncols=60) as pbar:
             for i, (images, gts) in enumerate(train_dataloader):
                 # images (batch_size, channel, height, width)
                 # gts (batch_size, height, width)
@@ -93,6 +123,11 @@ def trainer(train_args: argparse, logger):
         evaluator.clear()
         scheduler.step(loss_)
         if epoch % 5 == 0:
+            # validation
+            valider(train_args, logger)
+            train_args.model.train()
+
+            # save model
             torch.save(train_args.model.state_dict(),
                        os.path.join(train_args.save_model_path, "model_epoch_{}.pth".format(epoch)))
             logger.info(f"epoch {epoch} model saved successfully")

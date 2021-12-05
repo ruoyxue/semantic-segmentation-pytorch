@@ -7,6 +7,7 @@ import torch
 import tensorflow as tf
 from typing import Tuple, Union
 import logging
+from tqdm import tqdm
 
 
 def rotate(image, label, angle):
@@ -166,9 +167,9 @@ def crop_and_resize(image, label, crop_size, resize_size, overlap_ratio, save_pa
 
 
 if __name__ == "__main__":
-    image_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/original/image"
-    label_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/original/gt"
-    save_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/data_aug"
+    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/original/image"
+    label_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/original/gt"
+    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug"
     if not os.path.exists(os.path.join(save_path, "image")):
         os.makedirs(os.path.join(save_path, "image"))
     if not os.path.exists(os.path.join(save_path, "gt")):
@@ -179,30 +180,32 @@ if __name__ == "__main__":
 
 
     num = 0  # image saved count
+    final_size = 512  # output image size
     mosaic_image_list = []  # images for random mosaic
     mosaic_label_list = []  # labels for random mosaic
+    with tqdm(total=len(os.listdir(image_path)), unit=" img") as pbar:
+        for image_name in os.listdir(image_path):
+            img = cv2.imread(os.path.join(image_path, image_name))
+            gt = cv2.imread(os.path.join(label_path, image_name))
+            mosaic_image_list.append(img)
+            mosaic_label_list.append(gt)
 
-    for image_name in os.listdir(image_path):
-        img = cv2.imread(os.path.join(image_path, image_name))
-        gt = cv2.imread(os.path.join(label_path, image_name))
-        mosaic_image_list.append(img)
-        mosaic_label_list.append(gt)
+            if len(mosaic_image_list) == 4:
+                num += 1
+                image_mosaic, label_mosaic = random_mosaic(mosaic_image_list, mosaic_label_list, final_size)
+                mosaic_image_list.clear()
+                mosaic_label_list.clear()
+                cv2.imwrite(os.path.join(save_path, "image", "{}.png".format(num)), image_mosaic)
+                cv2.imwrite(os.path.join(save_path, "gt", "{}.png".format(num)), label_mosaic)
+            for _ in range(4):
+                chip_img, chip_gt = random_crop(img, gt, final_size)
+                random_angle = np.random.choice([0, 90, 180, 270])
+                random_flip = np.random.choice([-1, 0, 1])
+                chip_img, chip_gt = rotate(chip_img, chip_gt, random_angle)
+                chip_img, chip_gt = flip(chip_img, chip_gt, random_flip)
+                num += 1
+                cv2.imwrite(os.path.join(save_path, "image", "{}.png".format(num)), chip_img)
+                cv2.imwrite(os.path.join(save_path, "gt", "{}.png".format(num)), chip_gt)
 
-        if len(mosaic_image_list) == 4:
-            num += 1
-            image_mosaic, label_mosaic = random_mosaic(mosaic_image_list, mosaic_label_list, 256)
-            mosaic_image_list.clear()
-            mosaic_label_list.clear()
-            cv2.imwrite(os.path.join(save_path, "image", "{}.png".format(num)), image_mosaic)
-            cv2.imwrite(os.path.join(save_path, "gt", "{}.png".format(num)), label_mosaic)
-
-        img, gt = random_crop(img, gt, 256)
-        random_angle = np.random.choice([0, 90, 180, 270])
-        random_flip = np.random.choice([-1, 0, 1])
-        img, gt = rotate(img, gt, random_angle)
-        img, chip_label = flip(img, gt, random_flip)
-        num += 1
-        cv2.imwrite(os.path.join(save_path, "image", "{}.png".format(num)), img)
-        cv2.imwrite(os.path.join(save_path, "gt", "{}.png".format(num)), gt)
-        logging.basicConfig(level=logging.INFO, format="%(message)s")
-        logging.info(f"image saved count = {num}")
+            pbar.update()
+    print(f"image saved count = {num}")
