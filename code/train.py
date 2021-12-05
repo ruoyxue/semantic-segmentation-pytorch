@@ -68,6 +68,8 @@ def valider(train_args: argparse, logger):
 
 
 def trainer(train_args: argparse, logger):
+    if train_args.check_point_mode != "load":
+        logging("load checkpoint, restarting!")
     # 1. -------------Prepare dataloader, optimizer, scheduler, loss, evaluator---------------------------
     train_args.model.to(train_args.device)
     train_dataloader = PNGTrainloader(image_path=os.path.join(train_args.train_data_path, "image"),
