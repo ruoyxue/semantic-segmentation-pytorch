@@ -61,16 +61,12 @@ class TrainArgs(Args):
         parser.add_argument("--batch_size", type=int, default=1, help="Batch size")
         parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate")
         parser.add_argument("--device", type=str, default="cpu", help="Device for training")
-        parser.add_argument("--exp_train_path", type=str, required=True,
-                            help="Path for saving train experiment info")
+        parser.add_argument("--exp_path", type=str, required=True,
+                            help="Path for saving training experiment info")
         parser.add_argument("--train_data_path", type=str, required=True,
                             help="Path for training data, with dir 'image' and 'gt'")
         parser.add_argument("--valid_data_path", type=str, required=True,
                             help="Path for valid data, with dir 'image' and 'gt'")
-        parser.add_argument("--save_model_path", type=str, required=True,
-                            help="Path for saving trained model")
-        parser.add_argument("--check_point_path", type=str, default="../check_point",
-                            help="Path for saving checkpoint")
         parser.add_argument("--check_point_mode", type=str, default="none",
                             help="two mode 'save', 'load'")
         return parser.parse_args()
@@ -92,17 +88,6 @@ class TrainArgs(Args):
                 self.args.model = FCN16s(self.args.n_class)
             if self.args.model == "fcn8s":
                 self.args.model = FCN8s(self.args.n_class)
-
-        # check_point mode/path
-        if self.args.check_point_mode not in ["save", "load", "none"]:
-            raise AssertionError(
-                "Invalid check_point_mode, expected {['save', 'load', 'none']}, got " + self.args.check_point_mode)
-        if self.args.check_point_mode == "save":
-            if not os.path.exists(os.path.dirname(self.args.check_point_path)):
-                os.makedirs(os.path.dirname(self.args.check_point_path))
-        elif self.args.check_point_mode == "load":
-            if not os.path.exists(self.args.check_point_path):
-                raise AssertionError("Checkpoint not exists")
 
         # device
         if self.args.device == "cpu":
@@ -130,20 +115,33 @@ class TrainArgs(Args):
            len(os.listdir(os.path.join(self.args.valid_data_path, "gt"))) == 0:
             raise FileNotFoundError("Valid data directory '" + self.args.valid_data_path + "' is empty")
 
-        # save_model_path
+        # exp_path
         if self.args.check_point_mode != "load":
-            if not os.path.exists(self.args.save_model_path):
-                os.makedirs(self.args.save_model_path)
-            if len(os.listdir(self.args.save_model_path)) != 0:
-                raise RuntimeError(f"Save model directory {self.args.save_model_path} is not empty")
-
-        # exp_train_path
-        if self.args.check_point_mode != "load":
-            if not os.path.exists(self.args.exp_train_path):
-                os.makedirs(self.args.exp_train_path)
-            for root, dirs, files in os.walk(os.path.join(self.args.exp_train_path)):
+            if not os.path.exists(self.args.exp_path):
+                os.makedirs(self.args.exp_path)
+            for root, dirs, files in os.walk(os.path.join(self.args.exp_path)):
                 if files:
-                    raise RuntimeError("exp train path {} has files".format(self.args.exp_train_path))
+                    raise RuntimeError("exp train path {} has files".format(self.args.exp_path))
+
+        # save_model_path
+        save_model_path = os.path.join(self.args.exp_path, "model_saved")
+        if self.args.check_point_mode != "load":
+            if not os.path.exists(save_model_path):
+                os.makedirs(save_model_path)
+            if len(os.listdir(save_model_path)) != 0:
+                raise RuntimeError(f"save model directory ({save_model_path}) is not empty")
+
+        # check_point mode/path
+        check_point_path = os.path.join(self.args.exp_path, "checkpoint_saved", "checkpoint.pt")
+        if self.args.check_point_mode not in ["save", "load", "none"]:
+            raise AssertionError(
+                "Invalid check_point_mode, expected {['save', 'load', 'none']}, got " + self.args.check_point_mode)
+        if self.args.check_point_mode == "save":
+            if not os.path.exists(os.path.dirname(check_point_path)):
+                os.makedirs(os.path.dirname(check_point_path))
+        elif check_point_mode == "load":
+            if not os.path.exists(check_point_path):
+                raise AssertionError("checkpoint ({}) not exists".format(check_point_path))
 
         return self.args
 
@@ -162,12 +160,8 @@ class TestArgs(Args):
         parser.add_argument("--device", type=str, default="cpu", help="Device for training")
         parser.add_argument("--test_data_path", type=str, required=True,
                             help="Path for testing data, with dir 'image' and 'label'")
-        parser.add_argument("--exp_test_path", type=str, required=True,
+        parser.add_argument("--exp_path", type=str, required=True,
                             help="Path for saving test experiment info")
-        parser.add_argument("--load_model_path", type=str, required=True,
-                            help="Path for loading trained model")
-        parser.add_argument("--save_output_path", type=str, required=True,
-                            help="Path for saving model predictions")
         return parser.parse_args()
 
     def analyse_args(self):
@@ -202,14 +196,22 @@ class TestArgs(Args):
            len(os.listdir(os.path.join(self.args.test_data_path, "gt"))) == 0:
             raise FileNotFoundError("Test data directory '" + self.args.test_data_path + "' is empty")
 
+        # exp_path
+        if not os.path.exists(self.args.exp_path):
+            raise FileNotFoundError(f"exp test path ({elf.args.exp_path}) not exist")
+        if os.path.exists(os.path.join(self.args.exp_path, "log_test.txt")):
+            raise RuntimeError(f"exp test path ({elf.args.exp_path}) already has file log_test.txt")
+
         # load_model_path
-        if not os.path.exists(self.args.load_model_path):
-            raise FileNotFoundError("Invalid model_path, '" + self.args.load_model_path + "' not exists")
+        load_model_path = os.path.join(self.args.exp_path, "model_saved", "model.pth")
+        if not os.path.exists(load_model_path):
+            raise FileNotFoundError(f"Invalid model_path ({load_model_path}) not exists")
 
         # save_output_path
-        if not os.path.exists(self.args.save_output_path):
-            os.makedirs(self.args.save_output_path)
-        if len(os.listdir(self.args.save_output_path)) != 0:
-            raise RuntimeError("Save predictions directory '" + self.args.save_output_path + "' is not empty")
+        save_output_path = os.path.join(self.args.exp_path, "prediction_saved")
+        if not os.path.exists(save_output_path):
+            os.makedirs(save_output_path)
+        if len(os.listdir(save_output_path)) != 0:
+            raise RuntimeError(f"Save predictions directory ({save_output_path}) is not empty")
 
         return self.args

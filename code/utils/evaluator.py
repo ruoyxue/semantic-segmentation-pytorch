@@ -88,9 +88,9 @@ class SegmentationEvaluator(Evaluator):
             self.metrics["miou"] += self.mean_iou(preds, gts)
 
     def log_metrics(self):
-        miou = round(self.metrics["miou"] / self.count, 4)
+        self.metrics["miou"] = round(self.metrics["miou"] / self.count, 4)
         # kappa = round(self.metrics["kappa"] / self.count, 4)
-        logging.info(f"miou: {miou}")
+        logging.info("miou: {}".format(self.metrics["miou"]))
 
     @staticmethod
     def iou(pred: torch.tensor, label: torch.tensor, pos_label: int) -> float:
