@@ -3,7 +3,7 @@
 # export CUDA_VISIBLE_DEVICES=6 # visible GPU device
 
 # change mode to choose either training 0 or testing 1
-mode=1;
+mode=0;
 
 if [ $mode -eq 0 ];
 then
