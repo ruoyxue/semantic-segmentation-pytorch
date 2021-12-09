@@ -79,7 +79,7 @@ class TrainArgs(Args):
                                  f"got {repr(self.args.model)}")
         else:
             if self.args.model == "unet":
-                self.args.model = UNet()
+                self.args.model = UNet(n_class=self.args.n_class, n_channel=3)
             if self.args.model == "mlp":
                 self.args.model = MLP()
             if self.args.model == "fcn32s":
@@ -172,7 +172,7 @@ class TestArgs(Args):
                                  str(valid_model) + ", got '" + repr(self.args.model) + "'")
         else:
             if self.args.model == "unet":
-                self.args.model = UNet()
+                self.args.model = UNet(n_channel=3, n_class=self.args.n_class)
             if self.args.model == "mlp":
                 self.args.model = MLP()
             if self.args.model == "fcn32s":

@@ -12,30 +12,11 @@ import logging
 from typing import List, Union
 
 
-class Evaluator:
-    def __init__(self):
-        self.count = 0  # count times of accumulation
-        self.metrics: dict = {}  # save metrics
-
-    def accumulate(self, preds: torch.Tensor, labels: torch.Tensor) -> dict:
-        """ Accumulate metrics """
-        raise NotImplementedError
-
-    def clear(self):
-        """ Clear metrics and count """
-        self.count = 0
-        for key in self.metrics.keys():
-            self.metrics[key] = 0
-
-    def log_metrics(self):
-        """ Print metrics using logging.info """
-        raise NotImplementedError
-
-
-class ClassificationEvaluator(Evaluator):
+class ClassificationEvaluator:
     """ Evaluator for classification task """
     def __init__(self, true_label):
-        super().__init__()
+        self.count = 0  # count times of accumulation
+        self.metrics: dict = {}  # save metrics
         self.true_label = true_label
         self.labels = []
         self.preds = []
@@ -46,6 +27,12 @@ class ClassificationEvaluator(Evaluator):
             f"preds {preds.shape} has different shape compared with labels {labels.shape}"
         self.preds += list(preds.detach().cpu().numpy())
         self.labels += list(labels.detach().cpu().numpy())
+
+    def clear(self):
+        """ Clear metrics and count """
+        self.count = 0
+        for key in self.metrics.keys():
+            self.metrics[key] = 0
 
     def log_metrics(self):
         args = {
@@ -61,18 +48,18 @@ class ClassificationEvaluator(Evaluator):
         logging.info(f"Precision: {precision}    Recall: {recall}    F1_score: {f_score}")
 
 
-class SegmentationEvaluator(Evaluator):
+class SegmentationEvaluator:
     """ Evaluator for segmentation task
     :param true_label: list of true labels, e.g. [0, 1, 2, 3, 4]
     """
     def __init__(self, true_label: Union[List, range]):
-        super().__init__()
+        self.count = 0  # count times of accumulation
+        self.metrics: dict = {"miou": 0}  # save metrics
         self.true_label = true_label
-        self.metrics.update(miou=0)
 
     @torch.no_grad()
     def accumulate(self, preds: torch.tensor, gts: torch.tensor):
-        """
+        """ accumulate info for batches, in order to give overall metrics
         :param preds: predictions (batch_size, height, width)
         :param gts: labels (batch_size, height, width)
         """
@@ -87,7 +74,14 @@ class SegmentationEvaluator(Evaluator):
             self.count += 1
             self.metrics["miou"] += self.mean_iou(preds, gts)
 
+    def clear(self):
+        """ Clear metrics and count """
+        self.count = 0
+        for key in self.metrics.keys():
+            self.metrics[key] = 0
+
     def log_metrics(self):
+        """ show metrics """
         self.metrics["miou"] = round(self.metrics["miou"] / self.count, 4)
         # kappa = round(self.metrics["kappa"] / self.count, 4)
         logging.info("miou: {}".format(self.metrics["miou"]))

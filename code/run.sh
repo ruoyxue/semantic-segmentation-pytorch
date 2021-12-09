@@ -9,30 +9,30 @@ if [ $mode -eq 0 ];
 then
 echo "------------Training Process------------" 
 python train.py \
---model fcn8s \
+--model unet \
 --epochs 300 \
---random_seed 1 \
+--random_seed 3428 \
 --n_class 2 \
---batch_size 16 \
---lr 0.001 \
+--batch_size 8 \
+--lr 0.01 \
 --device cuda:1 \
 --train_data_path /data/xueruoyao/dataset/road_extraction/deepglobe/new/train \
 --valid_data_path /data/xueruoyao/dataset/road_extraction/deepglobe/new/valid \
---exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/FCN8s \
+--exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/UNet \
 --check_point_mode save \
 
 elif [ $mode -eq 1 ];
 then
 echo "------------Testing Process-------------"
 python test.py \
---model fcn8s \
+--model unet \
 --n_class 2 \
 --chip_size 512 \
 --stride 256 \
---batch_size 16 \
---device cuda:0 \
+--batch_size 14 \
+--device cuda:1 \
 --test_data_path /data/xueruoyao/dataset/road_extraction/deepglobe/new/test \
---exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/FCN8s \
+--exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/UNet \
 
 fi
 exit 0

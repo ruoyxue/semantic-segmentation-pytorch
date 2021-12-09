@@ -6,6 +6,9 @@ import time
 import shutil
 from tqdm import tqdm
 import imagesize
+from numba import njit
+from torch import nn
+import torch
 
 
 def label_category_find():
@@ -18,6 +21,47 @@ def label_category_find():
         count += 1
         print(count)
     print(np.unique(np.array(labels)))
+
+@njit
+def label_statistics_help(mask, counts: list):
+    height, width = mask.shape
+    for i in range(height):
+        for j in range(width):
+            counts[mask[i, j]] += 1
+    return counts
+
+def find_damaged_label():
+    """ to find if there are damaged gt """
+    gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/gt"
+    criterion = nn.CrossEntropyLoss()
+    with tqdm(total=len(os.listdir(gt_path))) as pbar:
+        for gt_name in os.listdir(gt_path):
+            gt = cv2.imread(os.path.join(gt_path, gt_name))[:, :, 2]
+            gt = torch.from_numpy(gt).float()
+            loss = criterion(gt, gt)
+            if(torch.isnan(loss)):
+                print("nan: {}".format(gt_name))
+            pbar.update()
+
+
+def label_statistics():
+    """ compute each label has how many pixels, labels should be [0, 1, 2...] """
+    print("label statistics")
+    gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/gt"
+    label = [0, 1]
+    counts = np.zeros(len(label))
+    with tqdm(total=len(os.listdir(gt_path))) as pbar:
+        for gt_name in os.listdir(gt_path):
+            mask = cv2.imread(os.path.join(gt_path, gt_name))[:, :, 0]
+            counts = label_statistics_help(mask, counts)
+            pbar.update()
+    sum = 0
+    for i in range(len(label)):
+        print(f"{i}: {int(counts[i])}")
+        sum += int(counts[i])
+    print("percentage:")
+    for i in range(len(label)):
+        print(f"{i}: {round(float(counts[i])/sum, 4)}")
 
 
 def compute_rgb_mean_std():
@@ -89,8 +133,8 @@ def compute_rgb_mean_std():
 
 def data_clean():
     """ we put messy data into image and gt, perform label transform, with same name """
-    data_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/original"
-    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/clean"
+    data_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/clean"
+    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin"
     if not os.path.exists(os.path.join(save_path)):
         os.makedirs(os.path.join(save_path, "image"))
         os.makedirs(os.path.join(save_path, "gt"))
@@ -113,7 +157,7 @@ def data_clean():
             cv2.imwrite(os.path.join(save_path, "gt", image_name), gt)
             pbar.update()
 
-    print("clean data: image sum = {}, gt sum = {}".format(
+    print("data: image sum = {}, gt sum = {}".format(
         len(os.listdir(os.path.join(save_path, "image"))),
         len(os.listdir(os.path.join(save_path, "gt")))
     ))
@@ -188,17 +232,24 @@ def data_split():
 
 def statistic_image_size():
     """ count unique image size """
-    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/original/image"
-    image_size_list = []
-    for image_name in os.listdir(image_path):
-        width, height = imagesize.get(os.path.join(image_path, image_name))
-        if (height, width) not in image_size_list:
-            image_size_list.append((height, width))
-    print(image_size_list)
+    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
+    image_size_dict: dict = {}
+    print("statistics of image size")
+    with tqdm(total=len(os.listdir(image_path)), unit=" img") as pbar:
+        for image_name in os.listdir(image_path):
+            width, height = imagesize.get(os.path.join(image_path, image_name))
+            if (height, width) not in image_size_dict.keys():
+                image_size_dict[(height, width)] = 1
+            else:
+                image_size_dict[(height, width)] += 1
+            pbar.update()
+    print(image_size_dict)
 
 
 if __name__ == "__main__":
     # data_clean()
-    data_split()
-    # statistic_image_size()
+    # data_split()
+    statistic_image_size()
     # compute_rgb_mean_std()
+    # label_statistics()
+    # find_damaged_label()
