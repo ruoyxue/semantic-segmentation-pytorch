@@ -1,4 +1,4 @@
-pytorch deep learning framework
+pytorch semantic segmentation framework
 
 contains model: FCN, UNet
 
