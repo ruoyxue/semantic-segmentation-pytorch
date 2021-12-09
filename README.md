@@ -1,6 +1,6 @@
 pytorch deep learning framework
 
-contains model: FCN
+contains model: FCN, UNet
 
 use command below to run the project
 
