@@ -44,7 +44,7 @@ class LogSoftmaxCrossEntropyLoss:
         loss = torch.Tensor([0])
         preds = F.log_softmax(preds, dim=1)
         for i in torch.arange(batch_size):
-            gt = self.one_hot(gts[i]) * self.weight.T   # use broadcasting
+            gt = self.one_hot(gts[i]) * self.weight.reshape(-1, 1)   # use broadcasting
             pred = preds[i].reshape((self.n_class, -1))
             loss -= gt * pred / torch.sum(self.weight)  # reduce floating point underflow
         return loss
@@ -56,6 +56,6 @@ class LogSoftmaxCrossEntropyLoss:
         """
         # one_hot (n_class, height * width)
         one_hot = F.one_hot(gt.reshape(-1), num_classes=self.n_class).T
-        return one_hot * self.on_value + (not one_hot) * self.off_value
+        return one_hot * self.on_value + (torch.ones_like(one_hot) - one_hot) * self.off_value
 
 
