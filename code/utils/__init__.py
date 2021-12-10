@@ -1,6 +1,7 @@
 from .evaluator import ClassificationEvaluator, SegmentationEvaluator
 from .trainloader import PNGTrainloader, TIFFTrainloader
 from .testloader import PNGTestloader, TIFFTestloader
+from .loss import LogSoftmaxCrossEntropyLoss
 
 __all__ = [
     "ClassificationEvaluator",
@@ -8,5 +9,9 @@ __all__ = [
     "PNGTrainloader",
     "TIFFTrainloader",
     "PNGTestloader",
-    "TIFFTestloader"
+    "TIFFTestloader",
+    "LogSoftmaxCrossEntropyLoss"
 ]
+
+
+

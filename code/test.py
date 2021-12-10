@@ -31,7 +31,7 @@ def tester(test_args: argparse, logger):
                                     n_class=test_args.n_class, batch_size=test_args.batch_size,
                                     device=test_args.device)
 
-    evaluator = SegmentationEvaluator(true_label=range(test_args.n_class))
+    evaluator = SegmentationEvaluator(true_label=torch.arange(test_args.n_class))
     logger.info("done")
     # 2. ----------------------------Testing Process and evaluation-------------------------------------
     logger.info("loading model state dict...")

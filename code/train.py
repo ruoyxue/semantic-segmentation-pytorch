@@ -3,9 +3,11 @@ It is recommended that data augmentation is finished before training, which mean
 there wouldn't be any dynamic preprocessing in training process except normalisation.
 
 We provide simple data augmentation code in utils/data_augmentation.py
+
 TODO: add torch.jit.script
 TODO: add tensorboard visualisation
 TODO: add warm-up to optimizer
+TODO: remove ifs to accelerate GPU computations
 """
 
 import datetime
@@ -20,7 +22,8 @@ import torch
 from torch import optim, nn
 from args import TrainArgs, get_logger
 import argparse
-from utils import PNGTrainloader, PNGTestloader, SegmentationEvaluator
+from utils import PNGTrainloader, PNGTestloader, \
+    SegmentationEvaluator, LogSoftmaxCrossEntropyLoss
 from ruamel import yaml
 import shutil
 
@@ -46,7 +49,7 @@ def valider(train_args: argparse, logger):
                                     chip_size=512, stride=256,
                                     n_class=train_args.n_class, batch_size=train_args.batch_size,
                                     device=train_args.device)
-    evaluator = SegmentationEvaluator(true_label=range(train_args.n_class))
+    evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
 
     max_batch_num = np.ceil(len(test_dataloader) / train_args.batch_size)
     last_batch_flag = False
@@ -80,8 +83,9 @@ def trainer(train_args: argparse, logger):
                                       batch_size=train_args.batch_size, drop_last=True, shuffle=True)
     # criterion = nn.CrossEntropyLoss(weight=torch.from_numpy(np.array([4.31, 95.69])).float())
     # criterion.to(train_args.device)
-    criterion = nn.CrossEntropyLoss()
-    evaluator = SegmentationEvaluator(true_label=range(train_args.n_class))
+    criterion1 = LogSoftmaxCrossEntropyLoss(n_class=train_args.n_class)
+    criterion2 = nn.CrossEntropyLoss()
+    evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
     optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-5)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=1,
                                                      min_lr=1e-6, threshold=1e-2, verbose=True)
@@ -107,7 +111,6 @@ def trainer(train_args: argparse, logger):
 
     # 3. --------------------------Training Process and evaluation----------------------------------------
     train_args.model.train()
-    batch_num = 0  # record for loss computation
     for epoch in range(start_epoch, train_args.epochs + 1):
         if (epoch - 1) % 5 == 0:
             logging.info(datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"))
@@ -122,15 +125,19 @@ def trainer(train_args: argparse, logger):
                 optimizer.zero_grad()
                 # predictions (batch_size, n_class, height, width)
                 predictions = train_args.model(images)
-                loss = criterion(predictions, gts)
-                loss_ += loss
-                evaluator.accumulate(torch.argmax(predictions, dim=1), gts)
-                loss.backward()
-                optimizer.step()
-                batch_num = i
-                pbar.update(1)
+                loss1 = criterion1(predictions, gts)
+                loss2 = criterion2(predictions, gts)
+                print("loss mine: ", loss1.item())
+                print("loss nn: ", loss2.item())
 
-        logger.info(f"epoch: {epoch}    loss: {round(loss_.item() / (batch_num + 1), 5)}")
+                loss_ += loss2
+                evaluator.accumulate(torch.argmax(predictions, dim=1), gts)
+                loss2.backward()
+                optimizer.step()
+                pbar.update()
+
+        loss_ = round(loss_.item() / len(train_dataloader), 5)
+        logger.info(f"epoch: {epoch}    loss: {loss_.item()}")
         evaluator.log_metrics()
         evaluator.clear()
         scheduler.step(loss_)
@@ -141,7 +148,7 @@ def trainer(train_args: argparse, logger):
                 best_valid_miou = current_miou
                 # save model
                 torch.save(train_args.model.state_dict(),
-                            os.path.join(save_model_path, "model.pth"))
+                           os.path.join(save_model_path, "model.pth"))
                 logger.info(f"epoch {epoch} best model saved successfully")
                 train_args.model.train()
                 # whether to save checkpoint or not

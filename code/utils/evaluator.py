@@ -52,7 +52,7 @@ class SegmentationEvaluator:
     """ Evaluator for segmentation task
     :param true_label: list of true labels, e.g. [0, 1, 2, 3, 4]
     """
-    def __init__(self, true_label: Union[List, range]):
+    def __init__(self, true_label: torch.Tensor):
         self.count = 0  # count times of accumulation
         self.metrics: dict = {"miou": 0}  # save metrics
         self.true_label = true_label
@@ -73,6 +73,9 @@ class SegmentationEvaluator:
         elif preds.dim() == 2 and gts.dim() == 2:  # (height, width) for testing
             self.count += 1
             self.metrics["miou"] += self.mean_iou(preds, gts)
+        else:
+            raise RuntimeError(f"evaluator accumulate function got unexpected "
+                               f"dim preds: {preds.dim()}, gts: {gts.dim()}")
 
     def clear(self):
         """ Clear metrics and count """
@@ -87,7 +90,7 @@ class SegmentationEvaluator:
         logging.info("miou: {}".format(self.metrics["miou"]))
 
     @staticmethod
-    def iou(pred: torch.tensor, label: torch.tensor, pos_label: int) -> float:
+    def iou(pred: torch.tensor, label: torch.tensor, pos_label: torch.tensor) -> float:
         """ compute iou for binary problems
         :param pred: 2d tensor, prediction
         :param label: 2d tensor, label
