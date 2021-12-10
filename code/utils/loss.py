@@ -58,4 +58,6 @@ class LogSoftmaxCrossEntropyLoss:
         one_hot = F.one_hot(gt.reshape(-1), num_classes=self.n_class).T
         return one_hot * self.on_value + (torch.ones_like(one_hot) - one_hot) * self.off_value
 
-
+    def to(self, device):
+        """ transfer weight to device """
+        self.weight.to(device)

@@ -84,6 +84,7 @@ def trainer(train_args: argparse, logger):
     # criterion = nn.CrossEntropyLoss(weight=torch.from_numpy(np.array([4.31, 95.69])).float())
     # criterion.to(train_args.device)
     criterion1 = LogSoftmaxCrossEntropyLoss(n_class=train_args.n_class)
+    criterion1.to(train_args.device)
     criterion2 = nn.CrossEntropyLoss()
     evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
     optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-5)
