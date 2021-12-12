@@ -6,9 +6,10 @@ We provide simple data augmentation code in utils/data_augmentation.py
 
 TODO: add torch.jit.script
 TODO: add tensorboard visualisation
-TODO: add warm-up to optimizer
 TODO: remove ifs to accelerate GPU computations
 TODO: add apex.amp
+TODO: replace python code with C++, python serves as glue
+TODO: add self-constructed scheduler
 """
 
 import datetime
@@ -82,12 +83,12 @@ def trainer(train_args: argparse, logger):
                                       gt_path=os.path.join(train_args.train_data_path, "gt"),
                                       batch_size=train_args.batch_size, drop_last=True, shuffle=True)
     criterion = LogSoftmaxCrossEntropyLoss(n_class=train_args.n_class, weight=torch.tensor([0.0431, 0.9569]),
-                                           smoothing=0.1)
+                                           smoothing=0.002)
     # criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.0862, 1.9138], dtype=torch.float32))
     criterion.to(train_args.device)
     evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
-    optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=5e-6)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5,
+    optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-5)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
                                                      min_lr=1e-6, threshold=1e-3, verbose=True)
     with open(os.path.join(Args.args.exp_path, "config.yml"), "a") as f:
         yaml.dump({"optimizer": {"name": "SGD", "state_dict": optimizer.state_dict()}}, f)

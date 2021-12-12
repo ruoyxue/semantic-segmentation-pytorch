@@ -46,6 +46,7 @@ class LogSoftmaxCrossEntropyLoss:
         preds = F.log_softmax(preds, dim=1)
         for i in torch.arange(batch_size):
             gt = self.one_hot(gts[i]) * self.weight.reshape(-1, 1)  # use broadcasting
+            # print(gt)
             pred = preds[i].reshape((self.n_class, -1))
             """if torch.isnan(torch.sum(gt)):
                 print("gt is nan")
