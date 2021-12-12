@@ -22,32 +22,46 @@ class LogSoftmaxCrossEntropyLoss:
         self.n_class = n_class
         # weight
         if weight is None:
-            self.weight = torch.ones(n_class)
+            self.weight = torch.ones(n_class, dtype=torch.float32)
         else:
             assert len(weight) == n_class, f"loss __init__ weight dim" \
                                            f"({len(weight)}) != n_class({n_class})"
-            self.weight = weight
+            self.weight = weight.float() * n_class / torch.sum(weight)
         # smoothing
         assert 0 <= smoothing < 1, "loss __init__ smoothing has to satisfy [0, 1), " \
                                    "got {}".format(smoothing)
         self.off_value = smoothing / n_class
         self.on_value = 1. - smoothing + self.off_value
+        self.loss = torch.zeros(1, dtype=torch.float32, requires_grad=True)
 
     def __call__(self, preds: torch.tensor, gts: torch.tensor):
-        """ return sum loss of the batch
+        """ calculate mean loss of the batch
         :param preds: (batch_size, n_class, height, width)
         :param gts: (batch_size, height, width)
         """
         assert preds.shape[0] == gts.shape[0], f"loss input preds has different batchsize({preds.shape[0]}) "\
                                                f"compared to that of gts({gts.shape[0]})"
+        self.loss = torch.zeros_like(self.loss)
         batch_size = preds.shape[0]
-        loss = torch.Tensor([0])
         preds = F.log_softmax(preds, dim=1)
         for i in torch.arange(batch_size):
-            gt = self.one_hot(gts[i]) * self.weight.reshape(-1, 1)   # use broadcasting
+            gt = self.one_hot(gts[i]) * self.weight.reshape(-1, 1)  # use broadcasting
             pred = preds[i].reshape((self.n_class, -1))
-            loss -= gt * pred / torch.sum(self.weight)  # reduce floating point underflow
-        return loss
+            if torch.isnan(torch.sum(gt)):
+                print("gt is nan")
+            if torch.isnan(torch.sum(pred)):
+                print("pred is nan")
+            if torch.isnan(torch.sum(-gt * pred)):
+                print("sum is nan")
+                print("sum", torch.sum(-gt * pred))
+                print("gt", gt)
+                print("pred", pred)
+                break
+            self.loss += torch.sum(-gt * pred) / pred.shape[1]
+        if torch.isnan(self.loss):
+            print("loss is nan")
+            print("loss", self.loss)
+        return self.loss / batch_size
 
     def one_hot(self, gt: torch.tensor):
         """ one hot of gt
@@ -60,4 +74,5 @@ class LogSoftmaxCrossEntropyLoss:
 
     def to(self, device):
         """ transfer weight to device """
-        self.weight.to(device)
+        self.weight = self.weight.to(device)
+        self.loss = self.loss.to(device)

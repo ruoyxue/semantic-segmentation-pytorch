@@ -13,6 +13,7 @@ import torch
 
 def label_category_find():
     # calculate all the categories of label
+    print("label_category_find")
     labels = []
     count = 0
     for label_name in os.listdir("../dataset/semantic_segmentation/label"):
@@ -22,16 +23,10 @@ def label_category_find():
         print(count)
     print(np.unique(np.array(labels)))
 
-@njit
-def label_statistics_help(mask, counts: list):
-    height, width = mask.shape
-    for i in range(height):
-        for j in range(width):
-            counts[mask[i, j]] += 1
-    return counts
 
 def find_damaged_label():
     """ to find if there are damaged gt """
+    print("find_damaged_label")
     gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/gt"
     criterion = nn.CrossEntropyLoss()
     with tqdm(total=len(os.listdir(gt_path))) as pbar:
@@ -42,6 +37,14 @@ def find_damaged_label():
             if(torch.isnan(loss)):
                 print("nan: {}".format(gt_name))
             pbar.update()
+
+@njit
+def label_statistics_help(mask, counts: list):
+    height, width = mask.shape
+    for i in range(height):
+        for j in range(width):
+            counts[mask[i, j]] += 1
+    return counts
 
 
 def label_statistics():
@@ -66,6 +69,7 @@ def label_statistics():
 
 def compute_rgb_mean_std():
     """ calculate mean and std of R, G, B channel"""
+    print("compute_rgb_mean_std")
     image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
 
     R_mean, R_std = [], []
@@ -249,7 +253,7 @@ def statistic_image_size():
 if __name__ == "__main__":
     # data_clean()
     # data_split()
-    statistic_image_size()
+    # statistic_image_size()
     # compute_rgb_mean_std()
-    # label_statistics()
+    label_statistics()
     # find_damaged_label()

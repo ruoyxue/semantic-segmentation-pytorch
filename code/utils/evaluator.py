@@ -57,7 +57,6 @@ class SegmentationEvaluator:
         self.metrics: dict = {"miou": 0}  # save metrics
         self.true_label = true_label
 
-    @torch.no_grad()
     def accumulate(self, preds: torch.tensor, gts: torch.tensor):
         """ accumulate info for batches, in order to give overall metrics
         :param preds: predictions (batch_size, height, width)

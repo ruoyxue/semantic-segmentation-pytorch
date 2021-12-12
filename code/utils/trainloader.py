@@ -41,7 +41,7 @@ class ComputerVisionTrainLoader:
         self.label_path_list = []
         self.normalisation = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize(mean=(73.456, 97.530, 104.435), std=(31.513, 32.686, 40.193))  # B, G, R
+            transforms.Normalize(mean=(0.28806, 0.38247, 0.40955), std=(0.12476, 0.12818, 0.15762))  # B, G, R
         ])
         self.prepare_image_label_list()
 

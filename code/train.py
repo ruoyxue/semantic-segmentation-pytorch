@@ -40,7 +40,6 @@ def save_script(save_path):
     #             shutil.rmtree(os.path.join(root, d))
 
 
-@torch.no_grad()
 def valider(train_args: argparse, logger):
     """ use train model to test valid data and give metrics """
     logger.info("validation")
@@ -53,7 +52,7 @@ def valider(train_args: argparse, logger):
 
     max_batch_num = np.ceil(len(test_dataloader) / train_args.batch_size)
     last_batch_flag = False
-    with tqdm(total=max_batch_num, unit_scale=True, unit=" batch", colour="cyan", ncols=60) as pbar:
+    with tqdm(total=max_batch_num, unit_scale=True, unit=" batch", colour="cyan", ncols=80) as pbar:
         for i, (data, info) in enumerate(test_dataloader):
             data = data.to(train_args.device)  # data (batch_size, channels, height, width)
             preds = train_args.model(data)  # preds (batch_size, n_class, height, width)
@@ -81,15 +80,14 @@ def trainer(train_args: argparse, logger):
     train_dataloader = PNGTrainloader(image_path=os.path.join(train_args.train_data_path, "image"),
                                       gt_path=os.path.join(train_args.train_data_path, "gt"),
                                       batch_size=train_args.batch_size, drop_last=True, shuffle=True)
-    # criterion = nn.CrossEntropyLoss(weight=torch.from_numpy(np.array([4.31, 95.69])).float())
-    # criterion.to(train_args.device)
-    criterion1 = LogSoftmaxCrossEntropyLoss(n_class=train_args.n_class)
-    criterion1.to(train_args.device)
-    criterion2 = nn.CrossEntropyLoss()
+    criterion = LogSoftmaxCrossEntropyLoss(n_class=train_args.n_class, weight=torch.tensor([0.0431, 0.9569]),
+                                           smoothing=0.1)
+    # criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.0862, 1.9138], dtype=torch.float32))
+    criterion.to(train_args.device)
     evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
-    optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-5)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=1,
-                                                     min_lr=1e-6, threshold=1e-2, verbose=True)
+    optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=5e-6)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5,
+                                                     min_lr=1e-6, threshold=1e-3, verbose=True)
     with open(os.path.join(Args.args.exp_path, "config.yml"), "a") as f:
         yaml.dump({"optimizer": {"name": "SGD", "state_dict": optimizer.state_dict()}}, f)
         f.write("\n")
@@ -112,12 +110,14 @@ def trainer(train_args: argparse, logger):
 
     # 3. --------------------------Training Process and evaluation----------------------------------------
     train_args.model.train()
+    batch_sum = int(len(train_dataloader) / train_args.batch_size)
     for epoch in range(start_epoch, train_args.epochs + 1):
         if (epoch - 1) % 5 == 0:
             logging.info(datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"))
-        loss_ = torch.tensor([0], dtype=torch.float32, device=train_args.device)
-        with tqdm(total=int(len(train_dataloader) / train_args.batch_size),
-                  unit_scale=True, unit=" batch", colour="cyan", ncols=80) as pbar:
+        loss_ = torch.tensor([0], dtype=torch.float32, device=train_args.device,
+                             requires_grad=False)
+        with tqdm(total=batch_sum, unit_scale=True, unit=" batch",
+                  colour="cyan", ncols=80) as pbar:
             for i, (images, gts) in enumerate(train_dataloader):
                 # images (batch_size, channel, height, width)
                 # gts (batch_size, height, width)
@@ -126,42 +126,40 @@ def trainer(train_args: argparse, logger):
                 optimizer.zero_grad()
                 # predictions (batch_size, n_class, height, width)
                 predictions = train_args.model(images)
-                loss1 = criterion1(predictions, gts)
-                loss2 = criterion2(predictions, gts)
-                print("loss mine: ", loss1.item())
-                print("loss nn: ", loss2.item())
-
-                loss_ += loss2
-                evaluator.accumulate(torch.argmax(predictions, dim=1), gts)
-                loss2.backward()
+                loss = criterion(predictions, gts)
+                loss.backward()
                 optimizer.step()
+                with torch.no_grad():
+                    loss_ += loss
+                    evaluator.accumulate(torch.argmax(predictions, dim=1), gts)
                 pbar.update()
 
-        loss_ = round(loss_.item() / len(train_dataloader), 5)
-        logger.info(f"epoch: {epoch}    loss: {loss_.item()}")
+        loss_ /= batch_sum
+        logger.info(f"epoch: {epoch}    loss: {round(loss_.item(), 5)}")
         evaluator.log_metrics()
         evaluator.clear()
         scheduler.step(loss_)
         if epoch % 5 == 0:
             # validation, save model has best valid miou
-            current_miou = valider(train_args, logger)
-            if current_miou > best_valid_miou:
-                best_valid_miou = current_miou
-                # save model
-                torch.save(train_args.model.state_dict(),
-                           os.path.join(save_model_path, "model.pth"))
-                logger.info(f"epoch {epoch} best model saved successfully")
-                train_args.model.train()
-                # whether to save checkpoint or not
-                if train_args.check_point_mode in ["save", "load"]:
-                    torch.save({
-                        "epoch": epoch,
-                        "best_valid_miou": best_valid_miou,
-                        "model_state_dict": train_args.model.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "scheduler_state_dict": scheduler.state_dict()
-                    }, check_point_path)
-                    logger.info(f"epoch {epoch} checkpoint saved successfully")
+            with torch.no_grad():
+                current_miou = valider(train_args, logger)
+                if current_miou > best_valid_miou:
+                    best_valid_miou = current_miou
+                    # save model
+                    torch.save(train_args.model.state_dict(),
+                               os.path.join(save_model_path, "model.pth"))
+                    logger.info(f"epoch {epoch} best model saved successfully")
+                    train_args.model.train()
+                    # whether to save checkpoint or not
+                    if train_args.check_point_mode in ["save", "load"]:
+                        torch.save({
+                            "epoch": epoch,
+                            "best_valid_miou": best_valid_miou,
+                            "model_state_dict": train_args.model.state_dict(),
+                            "optimizer_state_dict": optimizer.state_dict(),
+                            "scheduler_state_dict": scheduler.state_dict()
+                        }, check_point_path)
+                        logger.info(f"epoch {epoch} checkpoint saved successfully")
         logger.info("")
 
 
@@ -176,7 +174,7 @@ if __name__ == "__main__":
             yaml.dump({"args": Args.origin}, f, Dumper=yaml.RoundTripDumper)
             f.write("\n")
     logger.info("done")
-
+    logger.info(Args.origin)
     trainer(Args.args, logger)
 
 
