@@ -8,6 +8,7 @@ TODO: add torch.jit.script
 TODO: add tensorboard visualisation
 TODO: add warm-up to optimizer
 TODO: remove ifs to accelerate GPU computations
+TODO: add apex.amp
 """
 
 import datetime
