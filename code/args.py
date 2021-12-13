@@ -198,9 +198,9 @@ class TestArgs(Args):
 
         # exp_path
         if not os.path.exists(self.args.exp_path):
-            raise FileNotFoundError(f"exp test path ({elf.args.exp_path}) not exist")
+            raise FileNotFoundError(f"exp test path ({self.args.exp_path}) not exist")
         if os.path.exists(os.path.join(self.args.exp_path, "log_test.txt")):
-            raise RuntimeError(f"exp test path ({elf.args.exp_path}) already has file log_test.txt")
+            raise RuntimeError(f"exp test path ({self.args.exp_path}) already has file log_test.txt")
 
         # load_model_path
         load_model_path = os.path.join(self.args.exp_path, "model_saved", "model.pth")

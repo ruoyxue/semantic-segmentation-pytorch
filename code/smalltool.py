@@ -236,7 +236,7 @@ def data_split():
 
 def statistic_image_size():
     """ count unique image size """
-    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
+    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/new/test/gt"
     image_size_dict: dict = {}
     print("statistics of image size")
     with tqdm(total=len(os.listdir(image_path)), unit=" img") as pbar:
@@ -253,7 +253,7 @@ def statistic_image_size():
 if __name__ == "__main__":
     # data_clean()
     # data_split()
-    # statistic_image_size()
+    statistic_image_size()
     # compute_rgb_mean_std()
-    label_statistics()
+    # label_statistics()
     # find_damaged_label()
