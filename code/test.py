@@ -63,6 +63,6 @@ def tester(test_args: argparse, logger):
 
 if __name__ == "__main__":
     Args = TestArgs()
-    logger = get_logger(os.path.join(Args.args.exp_path, "log_test.txt"))
-    tester(Args.args, logger)
+    logger = get_logger(os.path.join(Args.exp_path, "log_test.txt"))
+    tester(Args, logger)
 

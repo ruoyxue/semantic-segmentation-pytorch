@@ -1,6 +1,5 @@
 """
 Different Losses
-
 """
 
 import torch.nn as nn
@@ -48,7 +47,7 @@ class LogSoftmaxCrossEntropyLoss:
             gt = self.one_hot(gts[i]) * self.weight.reshape(-1, 1)  # use broadcasting
             # print(gt)
             pred = preds[i].reshape((self.n_class, -1))
-            """if torch.isnan(torch.sum(gt)):
+            '''if torch.isnan(torch.sum(gt)):
                 print("gt is nan")
             if torch.isnan(torch.sum(pred)):
                 print("pred is nan")
@@ -57,11 +56,11 @@ class LogSoftmaxCrossEntropyLoss:
                 print("sum", torch.sum(-gt * pred))
                 print("gt", gt)
                 print("pred", pred)
-                break"""
+                break'''
             self.loss += torch.sum(-gt * pred) / pred.shape[1]
-        """if torch.isnan(self.loss):
+        '''if torch.isnan(self.loss):
             print("loss is nan")
-            print("loss", self.loss)"""
+            print("loss", self.loss)'''
         return self.loss / batch_size
 
     def one_hot(self, gt: torch.tensor):

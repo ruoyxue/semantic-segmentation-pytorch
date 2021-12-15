@@ -38,6 +38,7 @@ def find_damaged_label():
                 print("nan: {}".format(gt_name))
             pbar.update()
 
+
 @njit
 def label_statistics_help(mask, counts: list):
     height, width = mask.shape

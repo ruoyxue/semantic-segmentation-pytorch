@@ -28,6 +28,11 @@ class Args:
         # self.log_arg()
         self.args = self.analyse_args()
 
+    def __getattr__(self, item):
+        if item not in self.args.keys():
+            raise KeyError(f"invalid key for args, have {list(self.args.keys())}, got {item}")
+        return self.args[item]
+
     def get_args(self):
         """ Get args from shell """
         raise NotImplementedError
@@ -139,7 +144,7 @@ class TrainArgs(Args):
         if self.args.check_point_mode == "save":
             if not os.path.exists(os.path.dirname(check_point_path)):
                 os.makedirs(os.path.dirname(check_point_path))
-        elif check_point_mode == "load":
+        elif self.args.check_point_mode == "load":
             if not os.path.exists(check_point_path):
                 raise AssertionError("checkpoint ({}) not exists".format(check_point_path))
 

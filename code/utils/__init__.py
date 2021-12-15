@@ -2,6 +2,7 @@ from .evaluator import ClassificationEvaluator, SegmentationEvaluator
 from .trainloader import PNGTrainloader, TIFFTrainloader
 from .testloader import PNGTestloader, TIFFTestloader
 from .loss import LogSoftmaxCrossEntropyLoss
+from .lr_scheduler import PlateauLRScheduler
 
 __all__ = [
     "ClassificationEvaluator",
@@ -10,7 +11,8 @@ __all__ = [
     "TIFFTrainloader",
     "PNGTestloader",
     "TIFFTestloader",
-    "LogSoftmaxCrossEntropyLoss"
+    "LogSoftmaxCrossEntropyLoss",
+    "PlateauLRScheduler"
 ]
 
 

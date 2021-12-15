@@ -10,6 +10,10 @@ TODO: remove ifs to accelerate GPU computations
 TODO: add apex.amp
 TODO: replace python code with C++, python serves as glue
 TODO: add self-constructed scheduler
+TODO: add data parallel
+TODO: add distributive training
+TODO: add gradient accumulation to upgrade gradients after a few epochs
+      (use small batchsize to simulate larger one)
 """
 
 import datetime
@@ -30,26 +34,13 @@ from ruamel import yaml
 import shutil
 
 
-def save_script(save_path):
-    """ save all .py and .sh documents to save_path/code for reusing """
-    shutil.copytree(os.getcwd(), os.path.join(save_path, "code"))
-    # for root, dirs, files in os.walk(os.path.join(save_path, "code")):
-    #     for file in files:
-    #         if file.split(".")[-1] not in ["py", "sh", "yml"]:
-    #             os.remove(os.path.join(root, file))
-    #     for d in dirs:
-    #         if d in ["save", "__pycache__"]:
-    #             shutil.rmtree(os.path.join(root, d))
-
-
 def valider(train_args: argparse, logger):
     """ use train model to test valid data and give metrics """
     logger.info("validation")
     train_args.model.eval()
     test_dataloader = PNGTestloader(image_path=os.path.join(train_args.valid_data_path, "image"),
-                                    chip_size=512, stride=256,
-                                    n_class=train_args.n_class, batch_size=train_args.batch_size,
-                                    device=train_args.device)
+                                    chip_size=512, stride=256, n_class=train_args.n_class,
+                                    batch_size=train_args.batch_size, device=train_args.device)
     evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
 
     max_batch_num = np.ceil(len(test_dataloader) / train_args.batch_size)
@@ -167,17 +158,16 @@ def trainer(train_args: argparse, logger):
 
 if __name__ == "__main__":
     Args = TrainArgs()
-    torch.manual_seed(Args.args.random_seed)
-    logger = get_logger(os.path.join(Args.args.exp_path, "log_train.txt"))
+    torch.manual_seed(Args.random_seed)
+    logger = get_logger(os.path.join(Args.exp_path, "log_train.txt"))
+    # record experiment information
     logger.info("record experiment code, config...")
-    if Args.args.check_point_mode != "load":
-        save_script(Args.args.exp_path)
-        with open(os.path.join(Args.args.exp_path, "config.yml"), "a") as f:
+    if Args.check_point_mode != "load":
+        shutil.copytree(os.getcwd(), os.path.join(Args.exp_path, "code"))
+        with open(os.path.join(Args.exp_path, "config.yml"), "a") as f:
             yaml.dump({"args": Args.origin}, f, Dumper=yaml.RoundTripDumper)
             f.write("\n")
     logger.info("done")
     logger.info(Args.origin)
-    trainer(Args.args, logger)
-
-
+    trainer(Args, logger)
 
