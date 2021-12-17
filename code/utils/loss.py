@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from typing import Optional
 
 
-class LogSoftmaxCrossEntropyLoss:
+class LogSoftmaxCELoss:
     """ log softmax + cross entropy loss
     :param n_class: true label is range(0, n_class)
     :param weight: weight for each class
@@ -23,7 +23,7 @@ class LogSoftmaxCrossEntropyLoss:
         if weight is None:
             self.weight = torch.ones(n_class, dtype=torch.float32)
         else:
-            assert len(weight) == n_class, f"loss __init__ weight dim" \
+            assert len(weight) == n_class, f"loss __init__ weight_dim" \
                                            f"({len(weight)}) != n_class({n_class})"
             self.weight = weight.float() * n_class / torch.sum(weight)
         # smoothing
@@ -76,3 +76,19 @@ class LogSoftmaxCrossEntropyLoss:
         """ transfer weight to device """
         self.weight = self.weight.to(device)
         self.loss = self.loss.to(device)
+
+    def state_dict(self):
+        return {
+            "criterion_type": type(self),
+            "n_class": self.n_class,
+            "weight": self.weight,
+            "off_value": self.off_value,
+            "on_value": self.on_value,
+            "loss": self.loss
+        }
+
+    def load_state_dict(self, state_dict: dict):
+        if type(self) is not state_dict["criterion_type"]:
+            raise TypeError("Criterion load, input dict has different criterion({}) with former "
+                            "instantiation({})".format(state_dict["criterion_type"], type(self)))
+        self.__dict__.update(state_dict)

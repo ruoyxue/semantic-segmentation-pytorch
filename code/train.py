@@ -29,7 +29,7 @@ from torch import optim, nn
 from args import TrainArgs, get_logger
 import argparse
 from utils import PNGTrainloader, PNGTestloader, \
-    SegmentationEvaluator, LogSoftmaxCrossEntropyLoss
+    SegmentationEvaluator, LogSoftmaxCELoss, PlateauLRScheduler
 from ruamel import yaml
 import shutil
 
@@ -73,14 +73,17 @@ def trainer(train_args: argparse, logger):
     train_dataloader = PNGTrainloader(image_path=os.path.join(train_args.train_data_path, "image"),
                                       gt_path=os.path.join(train_args.train_data_path, "gt"),
                                       batch_size=train_args.batch_size, drop_last=True, shuffle=True)
-    criterion = LogSoftmaxCrossEntropyLoss(n_class=train_args.n_class, weight=torch.tensor([0.0431, 0.9569]),
-                                           smoothing=0.002)
+    criterion = LogSoftmaxCELoss(n_class=train_args.n_class, weight=torch.tensor([0.0431, 0.9569]),
+                                 smoothing=0.002)
     # criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.0862, 1.9138], dtype=torch.float32))
     criterion.to(train_args.device)
     evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
     optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-5)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
-                                                     min_lr=1e-6, threshold=1e-3, verbose=True)
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
+    #                                                  min_lr=1e-6, threshold=1e-3, verbose=True)
+    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.2, patience=5, min_lr=1e-6,
+                                   threshold=1e-3, warmup_duration=20)
+
     with open(os.path.join(Args.args.exp_path, "config.yml"), "a") as f:
         yaml.dump({"optimizer": {"name": "SGD", "state_dict": optimizer.state_dict()}}, f)
         f.write("\n")
@@ -95,6 +98,7 @@ def trainer(train_args: argparse, logger):
         logger.info("load state_dict of model, optimizer, scheduler")
         checkpoint = torch.load(check_point_path)
         train_args.model.load_state_dict(checkpoint["model_state_dict"])
+        criterion.load_state_dict(checkpoint["criterion_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         best_valid_miou = checkpoint["best_valid_miou"]
@@ -131,7 +135,7 @@ def trainer(train_args: argparse, logger):
         logger.info(f"epoch: {epoch}    loss: {round(loss_.item(), 5)}")
         evaluator.log_metrics()
         evaluator.clear()
-        scheduler.step(loss_)
+        scheduler.step(loss_, epoch)
         if epoch % 5 == 0:
             # validation, save model has best valid miou
             with torch.no_grad():
@@ -149,6 +153,7 @@ def trainer(train_args: argparse, logger):
                             "epoch": epoch,
                             "best_valid_miou": best_valid_miou,
                             "model_state_dict": train_args.model.state_dict(),
+                            "criterion_state_dict": criterion.state_dict(),
                             "optimizer_state_dict": optimizer.state_dict(),
                             "scheduler_state_dict": scheduler.state_dict()
                         }, check_point_path)

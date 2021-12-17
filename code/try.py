@@ -2,17 +2,17 @@ import logging
 import os
 import random
 import shutil
-
 from torchvision import transforms, utils as vutils
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch import nn
 from collections import namedtuple
 import time
 import datetime
 import cv2
 from utils import PNGTestloader
-from utils import PNGTrainloader, TIFFTrainloader
+from utils import PNGTrainloader, TIFFTrainloader, PlateauLRScheduler, LogSoftmaxCELoss
 from ruamel import yaml
 image_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/original/image"
 label_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/original/label"
@@ -123,7 +123,38 @@ info_dict = {
 # logger.addHandler(terminal_handler)
 # logger.addHandler(file_handler)
 # logging.info("info hello")
-print(torch.cuda.is_available())
-a = torch.tensor(5)
-a.cuda()
-print(a)
+
+model = nn.Sequential(nn.Linear(3, 64),
+                      nn.Linear(64, 128))
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
+optimizer2 = torch.optim.SGD(model.parameters(), lr=0.2, momentum=0.9, weight_decay=1e-5)
+scheduler = PlateauLRScheduler(optimizer, patience=2, min_lr=1e-3, lr_factor=0.75,
+                               warmup_duration=20)
+# scheduler2 = PlateauLRScheduler(optimizer2, patience=5, min_lr=1e-6, lr_factor=0.25,
+#                                warmup_duration=20)
+
+# # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 2)
+#
+# optimizer.param_groups[0]["lr"] = 104
+# print(optimizer.state_dict())
+
+# print(scheduler.get_lr())
+
+logging.basicConfig(level=logging.DEBUG)
+#
+loss_ = torch.tensor([20], dtype=torch.float32).cuda()
+for epoch in range(1, 100):
+    if epoch == 8:
+        loss_ /= 2
+    scheduler.step(loss_, epoch)
+print(scheduler.best_metric)
+
+# scheduler2.load_state_dict(scheduler.state_dict())
+
+# criterion = LogSoftmaxCELoss(n_class=2, weight=torch.tensor([0.0431, 0.9569]),
+#                              smoothing=0.002)
+# criterion2 = LogSoftmaxCELoss(n_class=2, weight=torch.tensor([2, 3]),
+#                               smoothing=0.232)
+# print(criterion2.state_dict())
+# criterion2.load_state_dict(criterion.state_dict())
+# print(criterion2.state_dict())
