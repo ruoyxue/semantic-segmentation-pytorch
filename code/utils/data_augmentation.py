@@ -166,12 +166,12 @@ def crop_and_resize(image, label, crop_size, resize_size, overlap_ratio, save_pa
 
 
 if __name__ == "__main__":
-    # image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin/image"
-    # label_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin/gt"
-    # save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug"
-    image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/image"
-    label_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/gt"
-    save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug"
+    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented/train/image"
+    label_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented/train/gt"
+    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented/new_train"
+    # image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/image"
+    # label_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/gt"
+    # save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug"
     if not os.path.exists(os.path.join(save_path, "image")):
         os.makedirs(os.path.join(save_path, "image"))
     if not os.path.exists(os.path.join(save_path, "gt")):
@@ -181,7 +181,8 @@ if __name__ == "__main__":
         raise FileExistsError("save path directory 'image' or 'gt' isn't empty")
 
     num = 0  # image saved count
-    final_size = 256  # output image size
+    final_size = 512  # output image size
+    print(f"final size = {final_size}")
     mosaic_image_list = []  # images for random mosaic
     mosaic_label_list = []  # labels for random mosaic
     with tqdm(total=len(os.listdir(image_path)), unit=" img") as pbar:

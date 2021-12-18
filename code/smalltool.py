@@ -173,12 +173,12 @@ def data_clean():
 def data_split():
     """ split data into train, valid and test, all has the form of
     image and gt. Image and gt has same name """
-    # image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
-    # gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/gt"
-    # save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/new"
-    image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/image"
-    gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/gt"
-    save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/new"
+    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin/image"
+    gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin/gt"
+    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented"
+    # image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/image"
+    # gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/gt"
+    # save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/new"
 
     split_ratio = (0.6, 0.2, 0.2)  # train, valid, test
     image_name_list = os.listdir(image_path)
@@ -243,8 +243,8 @@ def data_split():
 
 def statistic_image_size():
     """ count unique image size """
-    # image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/new/test/gt"
-    image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/gt"
+    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented/valid/image"
+    # image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/gt"
     image_size_dict: dict = {}
     print("statistics of image size")
     with tqdm(total=len(os.listdir(image_path)), unit=" img") as pbar:
@@ -261,7 +261,7 @@ def statistic_image_size():
 if __name__ == "__main__":
     # data_clean()
     # data_split()
-    # statistic_image_size()
+    statistic_image_size()
     # compute_rgb_mean_std()
     # label_statistics()
     # find_damaged_label()
