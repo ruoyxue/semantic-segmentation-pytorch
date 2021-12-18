@@ -29,9 +29,9 @@ class Args:
         self.args = self.analyse_args()
 
     def __getattr__(self, item):
-        if item not in self.args.keys():
-            raise KeyError(f"invalid key for args, have {list(self.args.keys())}, got {item}")
-        return self.args[item]
+        if item not in self.args.__dict__.keys():
+            raise KeyError(f"invalid key for args, expects {list(self.args.__dict__.keys())}, got {item}")
+        return self.args.__dict__[item]
 
     def get_args(self):
         """ Get args from shell """
@@ -66,6 +66,8 @@ class TrainArgs(Args):
         parser.add_argument("--batch_size", type=int, default=1, help="Batch size")
         parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate")
         parser.add_argument("--device", type=str, default="cpu", help="Device for training")
+        parser.add_argument("--chip_size", type=int, help="chip size in sliding validation")
+        parser.add_argument("--stride", type=int, help="stride in sliding validation")
         parser.add_argument("--exp_path", type=str, required=True,
                             help="Path for saving training experiment info")
         parser.add_argument("--train_data_path", type=str, required=True,
@@ -128,7 +130,7 @@ class TrainArgs(Args):
                 if files:
                     raise RuntimeError("exp train path {} has files".format(self.args.exp_path))
 
-        # save_model_path
+        # save model path
         save_model_path = os.path.join(self.args.exp_path, "model_saved")
         if self.args.check_point_mode != "load":
             if not os.path.exists(save_model_path):
@@ -136,7 +138,7 @@ class TrainArgs(Args):
             if len(os.listdir(save_model_path)) != 0:
                 raise RuntimeError(f"save model directory ({save_model_path}) is not empty")
 
-        # check_point mode/path
+        # checkpoint mode/path
         check_point_path = os.path.join(self.args.exp_path, "checkpoint_saved", "checkpoint.pt")
         if self.args.check_point_mode not in ["save", "load", "none"]:
             raise AssertionError(
@@ -147,6 +149,13 @@ class TrainArgs(Args):
         elif self.args.check_point_mode == "load":
             if not os.path.exists(check_point_path):
                 raise AssertionError("checkpoint ({}) not exists".format(check_point_path))
+
+        # tensorboard save path
+        tensorboard_save_path = os.path.join(self.args.exp_path, "tensorboard_saved")
+        if not os.path.exists(tensorboard_save_path):
+            os.makedirs(tensorboard_save_path)
+        if len(os.listdir(tensorboard_save_path)) != 0:
+            raise RuntimeError(f"save tensorboard directory ({tensorboard_save_path}) is not empty")
 
         return self.args
 

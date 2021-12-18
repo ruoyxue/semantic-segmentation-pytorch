@@ -9,11 +9,17 @@ import torch.nn.functional as F
 from torch import nn
 from collections import namedtuple
 import time
+import numpy as np
+import argparse
 import datetime
 import cv2
 from utils import PNGTestloader
 from utils import PNGTrainloader, TIFFTrainloader, PlateauLRScheduler, LogSoftmaxCELoss
 from ruamel import yaml
+from torch.utils.tensorboard import SummaryWriter
+from models import UNet
+
+
 image_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/original/image"
 label_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/original/label"
 
@@ -130,8 +136,8 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_dec
 optimizer2 = torch.optim.SGD(model.parameters(), lr=0.2, momentum=0.9, weight_decay=1e-5)
 scheduler = PlateauLRScheduler(optimizer, patience=2, min_lr=1e-3, lr_factor=0.75,
                                warmup_duration=20)
-# scheduler2 = PlateauLRScheduler(optimizer2, patience=5, min_lr=1e-6, lr_factor=0.25,
-#                                warmup_duration=20)
+scheduler2 = PlateauLRScheduler(optimizer2, patience=5, min_lr=1e-6, lr_factor=0.25,
+                               warmup_duration=20)
 
 # # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 2)
 #
@@ -141,13 +147,13 @@ scheduler = PlateauLRScheduler(optimizer, patience=2, min_lr=1e-3, lr_factor=0.7
 # print(scheduler.get_lr())
 
 logging.basicConfig(level=logging.DEBUG)
-#
-loss_ = torch.tensor([20], dtype=torch.float32).cuda()
-for epoch in range(1, 100):
-    if epoch == 8:
-        loss_ /= 2
-    scheduler.step(loss_, epoch)
-print(scheduler.best_metric)
+
+# loss_ = torch.tensor([20], dtype=torch.float32).cuda()
+# for epoch in range(1, 100):
+#     if epoch == 8:
+#         loss_ /= 2
+#     scheduler.step(loss_, epoch)
+# print(scheduler.best_metric)
 
 # scheduler2.load_state_dict(scheduler.state_dict())
 
@@ -155,6 +161,57 @@ print(scheduler.best_metric)
 #                              smoothing=0.002)
 # criterion2 = LogSoftmaxCELoss(n_class=2, weight=torch.tensor([2, 3]),
 #                               smoothing=0.232)
-# print(criterion2.state_dict())
+# print(optimizer.state_dict())
+# print(scheduler.state_dict())
+# # print(criterion2.state_dict())
 # criterion2.load_state_dict(criterion.state_dict())
 # print(criterion2.state_dict())
+
+writer = SummaryWriter("./tensorboard_info/")
+
+# x = torch.tensor([5], dtype=torch.float32)
+# y = torch.tensor([2], dtype=torch.float32)
+# model = nn.Linear(1, 1)
+# criterion = torch.nn.MSELoss()
+# optimizer = torch.optim.SGD(model.parameters(), lr = 0.1)
+# for epoch in range(500):
+#     output = model(x)
+#     loss = criterion(output, x)
+#     writer.add_scalar("loss", loss, epoch)
+#     optimizer.zero_grad()
+#     loss.backward()
+#     optimizer.step()
+#
+# writer.flush()
+
+#
+
+loss = 1
+acc = 0
+for epoch in range(1000):
+    time.sleep(1)
+    loss += 8
+    acc += 10
+    print(epoch)
+    writer.add_scalars("metrics", {
+        "loss": loss,
+        "acc": acc
+    }, epoch)
+
+    writer.flush()
+#
+#
+# writer.close()
+# a = torch.tensor([1, 2], dtype=torch.float32).cuda()
+# l = [a[i].item() for i in range(2)]
+# print(l)
+# print(list(a.cpu().numpy()))
+# print(type(optimizer.state_dict()["param_groups"]))
+# a = [a[i].item() for i in range(2)]
+# print(type(a))
+# with open(os.path.join("config.yml"), "w") as f:
+#     yaml.dump({"args": a}, f)
+#     f.write("\n")
+#
+# a = torch.from_numpy(np.array(a)).float().cuda()
+# print(a)

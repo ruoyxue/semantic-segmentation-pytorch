@@ -53,9 +53,9 @@ class SegmentationEvaluator:
     :param true_label: list of true labels, e.g. [0, 1, 2, 3, 4]
     """
     def __init__(self, true_label: torch.Tensor):
-        self.count = 0  # count times of accumulation
-        self.metrics: dict = {"miou": 0}  # save metrics
-        self.true_label = true_label
+        self._count = 0  # count times of accumulation
+        self._metrics: dict = {"miou": 0}  # save metrics
+        self._true_label = true_label
 
     def accumulate(self, preds: torch.tensor, gts: torch.tensor):
         """ accumulate info for batches, in order to give overall metrics
@@ -67,26 +67,28 @@ class SegmentationEvaluator:
         if preds.dim() == 3 and gts.dim() == 3:  # (batch_size, height, width) for training
             n = preds.shape[0]
             for i in range(n):
-                self.count += 1
-                self.metrics["miou"] += self.mean_iou(preds[i, :, :], gts[i, :, :])
+                self._count += 1
+                self._metrics["miou"] += self.mean_iou(preds[i, :, :], gts[i, :, :])
         elif preds.dim() == 2 and gts.dim() == 2:  # (height, width) for testing
-            self.count += 1
-            self.metrics["miou"] += self.mean_iou(preds, gts)
+            self._count += 1
+            self._metrics["miou"] += self.mean_iou(preds, gts)
         else:
             raise RuntimeError(f"evaluator accumulate function got unexpected "
                                f"dim preds: {preds.dim()}, gts: {gts.dim()}")
 
+    def get_metrics(self):
+        return self._metrics
+
     def clear(self):
         """ Clear metrics and count """
-        self.count = 0
-        for key in self.metrics.keys():
-            self.metrics[key] = 0
+        self._count = 0
+        for key in self._metrics.keys():
+            self._metrics[key] = 0
 
-    def log_metrics(self):
-        """ show metrics """
-        self.metrics["miou"] = round(self.metrics["miou"] / self.count, 4)
-        # kappa = round(self.metrics["kappa"] / self.count, 4)
-        logging.info("miou: {}".format(self.metrics["miou"]))
+    def compute_mean(self):
+        """ compute mean metrics """
+        self._metrics["miou"] = round(self._metrics["miou"] / self._count, 5)
+        # kappa = round(self.metrics["kappa"] / self.count, 5)
 
     @staticmethod
     def iou(pred: torch.tensor, label: torch.tensor, pos_label: torch.tensor) -> float:
@@ -107,9 +109,9 @@ class SegmentationEvaluator:
         :return miou: float, mean iou
         """
         miou = 0
-        for i in self.true_label:
+        for i in self._true_label:
             miou += self.iou(pred, label, pos_label=i)
-        return miou / len(self.true_label)
+        return miou / len(self._true_label)
 
     def kappa(self, pred: torch.tensor, label: torch.tensor):
         """ compute kappa coefficient
@@ -119,6 +121,6 @@ class SegmentationEvaluator:
         """
         pred = np.array(pred).flatten()
         label = np.array(label).flatten()
-        return cohen_kappa_score(label, pred, labels=self.true_label)
+        return cohen_kappa_score(label, pred, labels=self._true_label)
 
 

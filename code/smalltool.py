@@ -27,7 +27,8 @@ def label_category_find():
 def find_damaged_label():
     """ to find if there are damaged gt """
     print("find_damaged_label")
-    gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/gt"
+    # gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/gt"
+    gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/gt"
     criterion = nn.CrossEntropyLoss()
     with tqdm(total=len(os.listdir(gt_path))) as pbar:
         for gt_name in os.listdir(gt_path):
@@ -140,6 +141,7 @@ def data_clean():
     """ we put messy data into image and gt, perform label transform, with same name """
     data_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/clean"
     save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin"
+
     if not os.path.exists(os.path.join(save_path)):
         os.makedirs(os.path.join(save_path, "image"))
         os.makedirs(os.path.join(save_path, "gt"))
@@ -171,9 +173,13 @@ def data_clean():
 def data_split():
     """ split data into train, valid and test, all has the form of
     image and gt. Image and gt has same name """
-    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
-    gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/gt"
-    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/new"
+    # image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
+    # gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/gt"
+    # save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/new"
+    image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/image"
+    gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/gt"
+    save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/new"
+
     split_ratio = (0.6, 0.2, 0.2)  # train, valid, test
     image_name_list = os.listdir(image_path)
     assert sum(split_ratio) == 1, f"expect split ratio sum = 1, got {sum(split_ratio)}"
@@ -237,7 +243,8 @@ def data_split():
 
 def statistic_image_size():
     """ count unique image size """
-    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/new/test/gt"
+    # image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/new/test/gt"
+    image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/gt"
     image_size_dict: dict = {}
     print("statistics of image size")
     with tqdm(total=len(os.listdir(image_path)), unit=" img") as pbar:
@@ -254,7 +261,8 @@ def statistic_image_size():
 if __name__ == "__main__":
     # data_clean()
     # data_split()
-    statistic_image_size()
+    # statistic_image_size()
     # compute_rgb_mean_std()
     # label_statistics()
     # find_damaged_label()
+    pass

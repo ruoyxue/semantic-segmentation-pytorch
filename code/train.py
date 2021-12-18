@@ -9,11 +9,11 @@ TODO: add tensorboard visualisation
 TODO: remove ifs to accelerate GPU computations
 TODO: add apex.amp
 TODO: replace python code with C++, python serves as glue
-TODO: add self-constructed scheduler
 TODO: add data parallel
 TODO: add distributive training
 TODO: add gradient accumulation to upgrade gradients after a few epochs
       (use small batchsize to simulate larger one)
+TODO: add pretrained parameters to models
 """
 
 import datetime
@@ -32,6 +32,7 @@ from utils import PNGTrainloader, PNGTestloader, \
     SegmentationEvaluator, LogSoftmaxCELoss, PlateauLRScheduler
 from ruamel import yaml
 import shutil
+from torch.utils.tensorboard import SummaryWriter
 
 
 def valider(train_args: argparse, logger):
@@ -39,13 +40,14 @@ def valider(train_args: argparse, logger):
     logger.info("validation")
     train_args.model.eval()
     test_dataloader = PNGTestloader(image_path=os.path.join(train_args.valid_data_path, "image"),
-                                    chip_size=512, stride=256, n_class=train_args.n_class,
-                                    batch_size=train_args.batch_size, device=train_args.device)
+                                    chip_size=train_args.chip_size, stride=train_args.stride,
+                                    n_class=train_args.n_class, batch_size=train_args.batch_size,
+                                    device=train_args.device)
     evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
 
     max_batch_num = np.ceil(len(test_dataloader) / train_args.batch_size)
     last_batch_flag = False
-    with tqdm(total=max_batch_num, unit_scale=True, unit=" batch", colour="cyan", ncols=80) as pbar:
+    with tqdm(total=max_batch_num, unit_scale=True, unit=" batch", colour="magenta", ncols=60) as pbar:
         for i, (data, info) in enumerate(test_dataloader):
             data = data.to(train_args.device)  # data (batch_size, channels, height, width)
             preds = train_args.model(data)  # preds (batch_size, n_class, height, width)
@@ -58,15 +60,15 @@ def valider(train_args: argparse, logger):
                 gt = torch.tensor(cv2.imread(os.path.join(train_args.valid_data_path, "gt", image_name))[:, :, 0])
                 evaluator.accumulate(whole_label, gt.to(train_args.device))
             pbar.update()
-    evaluator.log_metrics()
-    return evaluator.metrics["miou"]
+    evaluator.compute_mean()
+    logger.info("valid miou: {}".format(evaluator.get_metrics()["miou"]))
+    return evaluator.get_metrics()["miou"]
 
 
 def trainer(train_args: argparse, logger):
-    if train_args.check_point_mode == "load":
-        logger.info("load checkpoint, restarting!")
     save_model_path = os.path.join(train_args.exp_path, "model_saved")
-    check_point_path = os.path.join(train_args.exp_path, "checkpoint_saved", "checkpoint.pt")
+    save_checkpoint_path = os.path.join(train_args.exp_path, "checkpoint_saved", "checkpoint.pt")
+    save_tensorboard_path = os.path.join(train_args.exp_path, "tensorboard_saved")
     # 1. -------------Prepare dataloader, optimizer, scheduler, loss, evaluator---------------------------
     logger.info("prepare dataloader, optimizer, scheduler, loss, evaluator...")
     train_args.model.to(train_args.device)
@@ -81,24 +83,28 @@ def trainer(train_args: argparse, logger):
     optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-5)
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
     #                                                  min_lr=1e-6, threshold=1e-3, verbose=True)
-    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.2, patience=5, min_lr=1e-6,
-                                   threshold=1e-3, warmup_duration=20)
-
-    with open(os.path.join(Args.args.exp_path, "config.yml"), "a") as f:
-        yaml.dump({"optimizer": {"name": "SGD", "state_dict": optimizer.state_dict()}}, f)
-        f.write("\n")
-        yaml.dump({"scheduler": {"name": "ReduceLROnPlateau", "state_dict": scheduler.state_dict()}}, f)
-        f.write("\n")
+    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.5, patience=5, min_lr=1e-6,
+                                   threshold=5e-4, warmup_duration=20)
+    if train_args.check_point_mode == "save":
+        with open(os.path.join(train_args.exp_path, "config.yml"), "a") as f:
+            yaml.dump({"optimizer": {"type": str(type(optimizer)), "state_dict": optimizer.state_dict()}}, f)
+            f.write("\n")
+            yaml.dump({"scheduler": scheduler.state_dict()}, f)
+            f.write("\n")
+            yaml.dump({"loss": criterion.state_dict()}, f)
+            f.write("\n")
     logger.info("done")
 
     # 2. ---------------------------whether to load checkpoint-------------------------------------------
+    writer = SummaryWriter(save_tensorboard_path)
     start_epoch = 1  # range(start_epoch, epochs + 1) which works for loading checkpoint
     best_valid_miou = 0  # record best valid miou, just save model has the best valid miou
     if train_args.check_point_mode == "load":
-        logger.info("load state_dict of model, optimizer, scheduler")
-        checkpoint = torch.load(check_point_path)
+        logger.info("load state_dict of model, optimizer, scheduler, loss")
+        checkpoint = torch.load(save_checkpoint_path)
         train_args.model.load_state_dict(checkpoint["model_state_dict"])
         criterion.load_state_dict(checkpoint["criterion_state_dict"])
+        criterion.to(train_args.device)
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         best_valid_miou = checkpoint["best_valid_miou"]
@@ -113,8 +119,7 @@ def trainer(train_args: argparse, logger):
             logging.info(datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"))
         loss_ = torch.tensor([0], dtype=torch.float32, device=train_args.device,
                              requires_grad=False)
-        with tqdm(total=batch_sum, unit_scale=True, unit=" batch",
-                  colour="cyan", ncols=80) as pbar:
+        with tqdm(total=batch_sum, unit_scale=True, unit=" batch", colour="cyan", ncols=80) as pbar:
             for i, (images, gts) in enumerate(train_dataloader):
                 # images (batch_size, channel, height, width)
                 # gts (batch_size, height, width)
@@ -132,11 +137,12 @@ def trainer(train_args: argparse, logger):
                 pbar.update()
 
         loss_ /= batch_sum
-        logger.info(f"epoch: {epoch}    loss: {round(loss_.item(), 5)}")
-        evaluator.log_metrics()
+        logger.info(f"epoch: {epoch}    train_loss: {round(loss_.item(), 5)}")
+        evaluator.compute_mean()
+        logger.info("train miou: {}".format(evaluator.get_metrics()["miou"]))
         evaluator.clear()
         scheduler.step(loss_, epoch)
-        if epoch % 5 == 0:
+        if epoch % 1 == 0:
             # validation, save model has best valid miou
             with torch.no_grad():
                 current_miou = valider(train_args, logger)
@@ -156,9 +162,16 @@ def trainer(train_args: argparse, logger):
                             "criterion_state_dict": criterion.state_dict(),
                             "optimizer_state_dict": optimizer.state_dict(),
                             "scheduler_state_dict": scheduler.state_dict()
-                        }, check_point_path)
+                        }, save_checkpoint_path)
                         logger.info(f"epoch {epoch} checkpoint saved successfully")
         logger.info("")
+        writer.add_scalars("metrics", {
+            "train_loss": round(loss_.item(), 5),
+            "train_miou": evaluator.get_metrics()["miou"],
+            "valid_miou": current_miou
+        }, epoch)
+        writer.flush()
+    writer.close()
 
 
 if __name__ == "__main__":
@@ -166,13 +179,13 @@ if __name__ == "__main__":
     torch.manual_seed(Args.random_seed)
     logger = get_logger(os.path.join(Args.exp_path, "log_train.txt"))
     # record experiment information
-    logger.info("record experiment code, config...")
-    if Args.check_point_mode != "load":
+    if Args.check_point_mode == "save":
         shutil.copytree(os.getcwd(), os.path.join(Args.exp_path, "code"))
         with open(os.path.join(Args.exp_path, "config.yml"), "a") as f:
-            yaml.dump({"args": Args.origin}, f, Dumper=yaml.RoundTripDumper)
+            yaml.dump({"args": Args.origin}, f)
             f.write("\n")
-    logger.info("done")
+    elif Args.check_point_mode == "load":
+        logger.info("----------Load Checkpoint, Restarting----------")
     logger.info(Args.origin)
     trainer(Args, logger)
 

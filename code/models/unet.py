@@ -31,20 +31,20 @@ class UNet(nn.Module):
             if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
                 nn.init.kaiming_normal_(layer.weight, nonlinearity="relu")
                 nn.init.zeros_(layer.bias)
-            self.leftconv1.apply(init_weight)
-            self.leftconv2.apply(init_weight)
-            self.leftconv3.apply(init_weight)
-            self.leftconv4.apply(init_weight)
-            self.leftconv5.apply(init_weight)
-            self.rightconv1.apply(init_weight)
-            self.rightconv2.apply(init_weight)
-            self.rightconv3.apply(init_weight)
-            self.rightconv4.apply(init_weight)
-            self.deconv1.apply(init_weight)
-            self.deconv2.apply(init_weight)
-            self.deconv3.apply(init_weight)
-            self.deconv4.apply(init_weight)
-            self.classifier.apply(init_weight)
+        self.leftconv1.apply(init_weight)
+        self.leftconv2.apply(init_weight)
+        self.leftconv3.apply(init_weight)
+        self.leftconv4.apply(init_weight)
+        self.leftconv5.apply(init_weight)
+        self.rightconv1.apply(init_weight)
+        self.rightconv2.apply(init_weight)
+        self.rightconv3.apply(init_weight)
+        self.rightconv4.apply(init_weight)
+        self.deconv1.apply(init_weight)
+        self.deconv2.apply(init_weight)
+        self.deconv3.apply(init_weight)
+        self.deconv4.apply(init_weight)
+        self.classifier.apply(init_weight)
 
     def forward(self, x):
         x1 = self.leftconv1(x)
@@ -57,8 +57,6 @@ class UNet(nn.Module):
         y3 = self.rightconv3(torch.concat([self.deconv3(y2), x2], dim=1))
         y4 = self.rightconv4(torch.concat([self.deconv4(y3), x1], dim=1))
         return self.classifier(y4)
-
-
 
 
 class _UNetDoubleConvBlock(nn.Module):

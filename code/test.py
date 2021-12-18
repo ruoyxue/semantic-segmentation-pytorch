@@ -42,7 +42,7 @@ def tester(test_args: argparse, logger):
     max_batch_num = np.ceil(len(test_dataloader) / test_args.batch_size)
     whole_image_count = 0
     last_batch_flag = False
-    with tqdm(total=max_batch_num, unit_scale=True, unit=" batch", colour="cyan", ncols=60) as pbar:
+    with tqdm(total=max_batch_num, unit_scale=True, unit=" batch", colour="magenta", ncols=60) as pbar:
         for i, (data, info) in enumerate(test_dataloader):
             data = data.to(test_args.device)  # data (batch_size, channels, height, width)
             preds = test_args.model(data)  # preds (batch_size, n_class, height, width)
@@ -56,9 +56,10 @@ def tester(test_args: argparse, logger):
                 gt = torch.tensor(cv2.imread(os.path.join(test_args.test_data_path, "gt", image_name))[:, :, 0])
                 evaluator.accumulate(whole_label, gt.to(test_args.device))
                 cv2.imwrite(os.path.join(save_output_path, image_name), whole_label.cpu().numpy())
-            pbar.update(1)
-    evaluator.log_metrics()
-    logger.info("whole_label_count = {}".format(whole_image_count))
+            pbar.update()
+    evaluator.compute_mean()
+    logger.info("validation miou: {}".format(evaluator.get_metrics()["miou"]))
+    logger.info("count = {}".format(whole_image_count))
 
 
 if __name__ == "__main__":

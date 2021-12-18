@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 from typing import Optional
+import numpy as np
 
 
 class LogSoftmaxCELoss:
@@ -73,22 +74,24 @@ class LogSoftmaxCELoss:
         return one_hot * self.on_value + (torch.ones_like(one_hot) - one_hot) * self.off_value
 
     def to(self, device):
-        """ transfer weight to device """
+        """ transfer criterion to device """
         self.weight = self.weight.to(device)
         self.loss = self.loss.to(device)
 
     def state_dict(self):
         return {
-            "criterion_type": type(self),
+            "criterion_type": str(type(self)),
             "n_class": self.n_class,
-            "weight": self.weight,
+            "weight": [self.weight[i].item() for i in range(self.n_class)],
             "off_value": self.off_value,
             "on_value": self.on_value,
-            "loss": self.loss
+            "loss": self.loss.item()
         }
 
     def load_state_dict(self, state_dict: dict):
-        if type(self) is not state_dict["criterion_type"]:
+        if str(type(self)) != state_dict["criterion_type"]:
             raise TypeError("Criterion load, input dict has different criterion({}) with former "
-                            "instantiation({})".format(state_dict["criterion_type"], type(self)))
+                            "instantiation({})".format(state_dict["criterion_type"], str(type(self))))
+        state_dict["weight"] = torch.from_numpy(np.array(state_dict["weight"])).float()
+        state_dict["loss"] = torch.tensor([state_dict["loss"]], dtype=torch.float32)
         self.__dict__.update(state_dict)
