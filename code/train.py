@@ -96,7 +96,8 @@ def trainer(train_args: argparse, logger):
     logger.info("done")
 
     # 2. ---------------------------whether to load checkpoint-------------------------------------------
-    writer = SummaryWriter(save_tensorboard_path)
+    writer_metrics = SummaryWriter(os.path.join(save_tensorboard_path, "metrics"))
+    writer_model = SummaryWriter(os.path.join(save_tensorboard_path, "model"))
     start_epoch = 1  # range(start_epoch, epochs + 1) which works for loading checkpoint
     best_valid_miou = 0  # record best valid miou, just save model has the best valid miou
     if train_args.check_point_mode == "load":
@@ -124,6 +125,9 @@ def trainer(train_args: argparse, logger):
                 # images (batch_size, channel, height, width)
                 # gts (batch_size, height, width)
                 images = images.to(train_args.device)
+                if i == 0 and epoch == 1:
+                    writer_model.add_graph(train_args.model, images)
+                    writer_model.close()
                 gts = gts.to(train_args.device)
                 optimizer.zero_grad()
                 # predictions (batch_size, n_class, height, width)
@@ -165,13 +169,13 @@ def trainer(train_args: argparse, logger):
                         }, save_checkpoint_path)
                         logger.info(f"epoch {epoch} checkpoint saved successfully")
         logger.info("")
-        writer.add_scalars("metrics", {
+        writer_metrics.add_scalars("metrics", {
             "train_loss": round(loss_.item(), 5),
             "train_miou": evaluator.get_metrics()["miou"],
             "valid_miou": current_miou
         }, epoch)
-        writer.flush()
-    writer.close()
+        writer_metrics.flush()
+    writer_metrics.close()
 
 
 if __name__ == "__main__":

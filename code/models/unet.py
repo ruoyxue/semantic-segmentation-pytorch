@@ -21,7 +21,10 @@ class UNet(nn.Module):
         self.deconv2 = nn.ConvTranspose2d(512, 256, kernel_size=3, stride=2, output_padding=1, padding=1)
         self.deconv3 = nn.ConvTranspose2d(256, 128, kernel_size=3, stride=2, output_padding=1, padding=1)
         self.deconv4 = nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, output_padding=1, padding=1)
-        self.maxpooling = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.maxpooling1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.maxpooling2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.maxpooling3 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.maxpooling4 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.classifier = nn.Conv2d(64, n_class, kernel_size=1)
         self._initialisation()
 
@@ -48,10 +51,10 @@ class UNet(nn.Module):
 
     def forward(self, x):
         x1 = self.leftconv1(x)
-        x2 = self.leftconv2(self.maxpooling(x1))
-        x3 = self.leftconv3(self.maxpooling(x2))
-        x4 = self.leftconv4(self.maxpooling(x3))
-        y0 = self.leftconv5(self.maxpooling(x4))
+        x2 = self.leftconv2(self.maxpooling1(x1))
+        x3 = self.leftconv3(self.maxpooling2(x2))
+        x4 = self.leftconv4(self.maxpooling3(x3))
+        y0 = self.leftconv5(self.maxpooling4(x4))
         y1 = self.rightconv1(torch.concat([self.deconv1(y0), x4], dim=1))
         y2 = self.rightconv2(torch.concat([self.deconv2(y1), x3], dim=1))
         y3 = self.rightconv3(torch.concat([self.deconv3(y2), x2], dim=1))
