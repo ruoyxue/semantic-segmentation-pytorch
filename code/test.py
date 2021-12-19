@@ -40,7 +40,7 @@ def tester(test_args: argparse, logger):
     test_args.model.to(test_args.device)
     logger.info("done")
     max_batch_num = np.ceil(len(test_dataloader) / test_args.batch_size)
-    whole_image_count = 0
+    test_count = 0
     last_batch_flag = False
     with tqdm(total=max_batch_num, unit_scale=True, unit=" batch", colour="magenta", ncols=60) as pbar:
         for i, (data, info) in enumerate(test_dataloader):
@@ -51,15 +51,16 @@ def tester(test_args: argparse, logger):
             for whole_label, image_name in test_dataloader.stitcher(preds, info, last_batch_flag):
                 # before: whole label (n_class, height, width)
                 whole_label = torch.argmax(whole_label, dim=0)
-                whole_image_count += 1
+                test_count += 1
                 # after: whole label (height, width)
                 gt = torch.tensor(cv2.imread(os.path.join(test_args.test_data_path, "gt", image_name))[:, :, 0])
                 evaluator.accumulate(whole_label, gt.to(test_args.device))
                 cv2.imwrite(os.path.join(save_output_path, image_name), whole_label.cpu().numpy())
             pbar.update()
     evaluator.compute_mean()
-    logger.info("validation miou: {}".format(evaluator.get_metrics()["miou"]))
-    logger.info("count = {}".format(whole_image_count))
+    metrics = evaluator.get_metrics()["miou"]
+    logger.info("test miou: {}  test iou: {}".format(metrics["miou"], metrics["iou"]))
+    logger.info("count = {}".format(test_count))
 
 
 if __name__ == "__main__":

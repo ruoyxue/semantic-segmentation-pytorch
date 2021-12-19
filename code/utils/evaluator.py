@@ -53,8 +53,8 @@ class SegmentationEvaluator:
     :param true_label: list of true labels, e.g. [0, 1, 2, 3, 4]
     """
     def __init__(self, true_label: torch.Tensor):
+        self._metrics: dict = {"miou": 0, "iou": 0}
         self._count = 0  # count times of accumulation
-        self._metrics: dict = {"miou": 0}  # save metrics
         self._true_label = true_label
 
     def accumulate(self, preds: torch.tensor, gts: torch.tensor):
@@ -64,17 +64,11 @@ class SegmentationEvaluator:
         """
         assert preds.shape == gts.shape,\
             "evaluator preds.shape != labels.shape"
-        if preds.dim() == 3 and gts.dim() == 3:  # (batch_size, height, width) for training
-            n = preds.shape[0]
-            for i in range(n):
-                self._count += 1
-                self._metrics["miou"] += self.mean_iou(preds[i, :, :], gts[i, :, :])
-        elif preds.dim() == 2 and gts.dim() == 2:  # (height, width) for testing
+        n = preds.shape[0]
+        for i in range(n):
             self._count += 1
-            self._metrics["miou"] += self.mean_iou(preds, gts)
-        else:
-            raise RuntimeError(f"evaluator accumulate function got unexpected "
-                               f"dim preds: {preds.dim()}, gts: {gts.dim()}")
+            self._metrics["miou"] += self.mean_iou(preds[i, :, :], gts[i, :, :])
+            self._metrics["iou"] += self.iou(preds[i, :, :], gts[i, :, :], pos_label=1)
 
     def get_metrics(self):
         return self._metrics
@@ -88,6 +82,7 @@ class SegmentationEvaluator:
     def compute_mean(self):
         """ compute mean metrics """
         self._metrics["miou"] = round(self._metrics["miou"] / self._count, 5)
+        self._metrics["iou"] = round(self._metrics["iou"] / self._count, 5)
         # kappa = round(self.metrics["kappa"] / self.count, 5)
 
     @staticmethod

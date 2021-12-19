@@ -61,7 +61,7 @@ def valider(train_args: argparse, logger):
                 evaluator.accumulate(whole_label, gt.to(train_args.device))
             pbar.update()
     evaluator.compute_mean()
-    return evaluator.get_metrics()["miou"]
+    return evaluator.get_metrics()
 
 
 def trainer(train_args: argparse, logger):
@@ -98,7 +98,7 @@ def trainer(train_args: argparse, logger):
     writer_metrics = SummaryWriter(os.path.join(save_tensorboard_path, "metrics"))
     writer_model = SummaryWriter(os.path.join(save_tensorboard_path, "model"))
     start_epoch = 1  # range(start_epoch, epochs + 1) which works for loading checkpoint
-    best_valid_miou = 0  # record best valid miou, just save model has the best valid miou
+    best_valid_metric = 0  # record best valid metric
     if train_args.check_point_mode == "load":
         logger.info("load state_dict of model, optimizer, scheduler, loss")
         checkpoint = torch.load(save_checkpoint_path)
@@ -107,7 +107,7 @@ def trainer(train_args: argparse, logger):
         criterion.to(train_args.device)
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
-        best_valid_miou = checkpoint["best_valid_miou"]
+        best_valid_metric = checkpoint["best_valid_metric"]
         start_epoch += checkpoint["epoch"]
         logger.info("done")
 
@@ -117,8 +117,7 @@ def trainer(train_args: argparse, logger):
     for epoch in range(start_epoch, train_args.epochs + 1):
         if (epoch - 1) % 5 == 0:
             logging.info(datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"))
-        loss_ = torch.tensor([0], dtype=torch.float32, device=train_args.device,
-                             requires_grad=False)
+        loss_ = torch.tensor([0], dtype=torch.float32, device=train_args.device, requires_grad=False)
         with tqdm(total=batch_sum, unit_scale=True, unit=" batch", colour="cyan", ncols=80) as pbar:
             for i, (images, gts) in enumerate(train_dataloader):
                 # images (batch_size, channel, height, width)
@@ -149,10 +148,11 @@ def trainer(train_args: argparse, logger):
         if epoch % 1 == 0:
             # validation, save model has best valid miou
             with torch.no_grad():
-                current_miou = valider(train_args, logger)
-                if current_miou > best_valid_miou:
-                    best_valid_miou = current_miou
-                    logger.info("valid miou: {}    best miou: {}".format(current_miou, best_valid_miou))
+                metrics = valider(train_args, logger)
+                if metrics["iou"] > best_valid_metric:
+                    best_valid_metric = metrics["iou"]
+                    logger.info("valid miou: {}  valid iou: {}  best miou: {}".\
+                                format(metrics["miou"], metrics["iou"], best_valid_metric))
                     # save model
                     torch.save(train_args.model.state_dict(),
                                os.path.join(save_model_path, "model.pth"))
@@ -162,7 +162,7 @@ def trainer(train_args: argparse, logger):
                     if train_args.check_point_mode in ["save", "load"]:
                         torch.save({
                             "epoch": epoch,
-                            "best_valid_miou": best_valid_miou,
+                            "best_valid_metric": best_valid_metric,
                             "model_state_dict": train_args.model.state_dict(),
                             "criterion_state_dict": criterion.state_dict(),
                             "optimizer_state_dict": optimizer.state_dict(),
@@ -173,7 +173,8 @@ def trainer(train_args: argparse, logger):
         writer_metrics.add_scalars("metrics", {
             "train_loss": round(loss_.item(), 5),
             "train_miou": evaluator.get_metrics()["miou"],
-            "valid_miou": current_miou
+            "valid_miou": metrics["miou"],
+            "valid_iou ": metrics["iou"]
         }, epoch)
         writer_metrics.flush()
     writer_metrics.close()

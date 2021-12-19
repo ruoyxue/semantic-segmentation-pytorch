@@ -185,20 +185,20 @@ writer = SummaryWriter("./tensorboard_info/")
 # writer.flush()
 
 #
-
-loss = 1
-acc = 0
-for epoch in range(1000):
-    time.sleep(1)
-    loss += 8
-    acc += 10
-    print(epoch)
-    writer.add_scalars("metrics", {
-        "loss": loss,
-        "acc": acc
-    }, epoch)
-
-    writer.flush()
+#
+# loss = 1
+# acc = 0
+# for epoch in range(1000):
+#     time.sleep(1)
+#     loss += 8
+#     acc += 10
+#     print(epoch)
+#     writer.add_scalars("metrics", {
+#         "loss": loss,
+#         "acc": acc
+#     }, epoch)
+#
+#     writer.flush()
 #
 #
 # writer.close()
@@ -215,3 +215,4 @@ for epoch in range(1000):
 #
 # a = torch.from_numpy(np.array(a)).float().cuda()
 # print(a)
+print(len(torch.arange(10)))
