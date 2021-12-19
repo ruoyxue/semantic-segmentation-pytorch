@@ -246,7 +246,7 @@ def data_split():
 
 def statistic_image_size():
     """ count unique image size """
-    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented/valid/image"
+    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented/train/gt"
     # image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/gt"
     image_size_dict: dict = {}
     print("statistics of image size")
@@ -326,9 +326,9 @@ def data_split_csv():
 if __name__ == "__main__":
     # data_clean()
     # data_split()
-    # statistic_image_size()
+    statistic_image_size()
     # compute_rgb_mean_std()
     # label_statistics()
     # find_damaged_label()
-    data_split_csv()
+    # data_split_csv()
     pass
