@@ -3,7 +3,7 @@
 # export CUDA_VISIBLE_DEVICES=6 # visible GPU device
 
 # change mode to choose either training 0 or testing 1
-mode=1;
+mode=0;
 
 if [ $mode -eq 0 ];
 then
@@ -11,17 +11,17 @@ echo "------------Training Process------------"
 python train.py \
 --model fcn8s \
 --epochs 300 \
---random_seed 312321 \
+--random_seed 234324 \
 --n_class 2 \
 --chip_size 512 \
 --stride 256 \
 --batch_size 16 \
---lr 0.01 \
+--lr 0.001 \
 --device cuda:6 \
 --train_data_path /data/xueruoyao/dataset/road_extraction/deepglobe/segmented/train \
 --valid_data_path /data/xueruoyao/dataset/road_extraction/deepglobe/segmented/valid \
---exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/FCN8s_add_warmup \
---check_point_mode load \
+--exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/FCN8s \
+--check_point_mode save \
 
 elif [ $mode -eq 1 ];
 then
@@ -34,7 +34,7 @@ python test.py \
 --batch_size 16 \
 --device cuda:6 \
 --test_data_path /data/xueruoyao/dataset/road_extraction/deepglobe/segmented/test \
---exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/FCN8s_add_warmup \
+--exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/FCN8s \
 
 fi
 exit 0
