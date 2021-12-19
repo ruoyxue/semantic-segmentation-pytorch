@@ -11,17 +11,17 @@ echo "------------Training Process------------"
 python train.py \
 --model unet \
 --epochs 300 \
---random_seed 432432 \
+--random_seed 423 \
 --n_class 2 \
 --chip_size 256 \
 --stride 128 \
 --batch_size 4 \
---lr 0.01 \
+--lr 0.001 \
 --device cuda:0 \
---train_data_path /home/xueruoyao/Documents/PythonProgram/dataset/new/train/ \
---valid_data_path /home/xueruoyao/Documents/PythonProgram/dataset/new/valid/ \
+--train_data_path /home/xueruoyao/Documents/PythonProgram/dataset/segmented/train \
+--valid_data_path /home/xueruoyao/Documents/PythonProgram/dataset/segmented/valid \
 --exp_path /home/xueruoyao/Documents/PythonProgram/exp/UNet \
---check_point_mode load \
+--check_point_mode save \
 
 elif [ $mode -eq 1 ];
 then

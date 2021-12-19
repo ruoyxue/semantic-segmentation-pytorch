@@ -57,6 +57,7 @@ class SegmentationEvaluator:
         self._count = 0  # count times of accumulation
         self._true_label = true_label
 
+    @torch.no_grad()
     def accumulate(self, preds: torch.tensor, gts: torch.tensor):
         """ accumulate info for batches, in order to give overall metrics
         :param preds: predictions (batch_size, height, width)
@@ -76,15 +77,6 @@ class SegmentationEvaluator:
             self._metrics["iou"] += self.iou(preds, gts, pos_label=1)
         else:
             raise RuntimeError(f"evaluator accumulate function expects input of dim 2 or 3, got {preds.dim()}")
-
-    def get_metrics(self):
-        return self._metrics
-
-    def clear(self):
-        """ Clear metrics and count """
-        self._count = 0
-        for key in self._metrics.keys():
-            self._metrics[key] = 0
 
     def compute_mean(self):
         """ compute mean metrics """
@@ -125,4 +117,11 @@ class SegmentationEvaluator:
         label = np.array(label).flatten()
         return cohen_kappa_score(label, pred, labels=self._true_label)
 
+    def get_metrics(self):
+        return self._metrics
 
+    def clear(self):
+        """ Clear metrics and count """
+        self._count = 0
+        for key in self._metrics.keys():
+            self._metrics[key] = 0

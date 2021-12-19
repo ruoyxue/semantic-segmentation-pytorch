@@ -170,9 +170,9 @@ if __name__ == "__main__":
     image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented/train/image"
     label_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented/train/gt"
     save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented/new_train"
-    # image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/image"
-    # label_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/gt"
-    # save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug"
+    # image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/segmented/test/image"
+    # label_path = "/home/xueruoyao/Documents/PythonProgram/dataset/segmented/test/gt"
+    # save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/segmented/new_test"
     if not os.path.exists(os.path.join(save_path, "image")):
         os.makedirs(os.path.join(save_path, "image"))
     if not os.path.exists(os.path.join(save_path, "gt")):
@@ -201,7 +201,7 @@ if __name__ == "__main__":
                 mosaic_label_list.clear()
                 cv2.imwrite(os.path.join(save_path, "image", "{}.png".format(num)), image_mosaic)
                 cv2.imwrite(os.path.join(save_path, "gt", "{}.png".format(num)), label_mosaic)
-            for _ in range(4):
+            for _ in range(6):
                 chip_img, chip_gt = random_crop(img, gt, final_size)
                 random_angle = np.random.choice([0, 90, 180, 270])
                 random_flip = np.random.choice([-1, 0, 1])

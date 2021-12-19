@@ -57,7 +57,7 @@ class PlateauLRScheduler:
         """ analogous to step function in torn.optim.lr_scheduler """
         # warm up step
         if epoch == 1:
-            self.best_metric = copy.deepcopy(current_metric)
+            self.best_metric = current_metric
 
         if self._warmup_count < self.warmup_duration:
             self.current_lr += self.initial_lr / self.warmup_duration
@@ -65,7 +65,7 @@ class PlateauLRScheduler:
             if self._is_better(current_metric):
                 self.best_metric = current_metric
             self._warmup_count += 1
-            logging.info(f"epoch {epoch}: warm up adjust lr to {self.current_lr}")
+            logging.info(f"Warm up adjust lr to {round(self.current_lr, 5)} for next epoch")
         else:
             # common step
             if self._is_better(current_metric):
@@ -76,7 +76,7 @@ class PlateauLRScheduler:
                 if self._bad_count > self.patience and self.current_lr > self.min_lr:
                     self.current_lr = max(self.current_lr * self.lr_factor, self.min_lr)
                     self.optimizer.param_groups[0]["lr"] = self.current_lr
-                    logging.info(f"epoch {epoch}: reduce lr to {self.current_lr}")
+                    logging.info(f"Reduce lr to {round(self.current_lr, 5)} for next epoch")
                     self._bad_count = 0
 
     def _is_better(self, current_metric):

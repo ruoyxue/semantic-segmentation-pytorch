@@ -37,7 +37,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 def valider(train_args: argparse, logger):
     """ use train model to test valid data and give metrics """
-    logger.info("validation")
     train_args.model.eval()
     test_dataloader = PNGTestloader(image_path=os.path.join(train_args.valid_data_path, "image"),
                                     chip_size=train_args.chip_size, stride=train_args.stride,
@@ -61,6 +60,7 @@ def valider(train_args: argparse, logger):
                 evaluator.accumulate(whole_label, gt.to(train_args.device))
             pbar.update()
     evaluator.compute_mean()
+    train_args.model.train()
     return evaluator.get_metrics()
 
 
@@ -95,8 +95,6 @@ def trainer(train_args: argparse, logger):
     logger.info("done")
 
     # 2. ---------------------------whether to load checkpoint-------------------------------------------
-    writer_metrics = SummaryWriter(os.path.join(save_tensorboard_path, "valid_metrics"))
-    writer_model = SummaryWriter(os.path.join(save_tensorboard_path, "model"))
     start_epoch = 1  # range(start_epoch, epochs + 1) which works for loading checkpoint
     best_valid_metric = 0  # record best valid metric
     if train_args.check_point_mode == "load":
@@ -113,10 +111,13 @@ def trainer(train_args: argparse, logger):
 
     # 3. --------------------------Training Process and evaluation----------------------------------------
     train_args.model.train()
+    writer_metrics = SummaryWriter(os.path.join(save_tensorboard_path, "metrics"))
+    writer_model = SummaryWriter(os.path.join(save_tensorboard_path, "model"))
     batch_sum = int(len(train_dataloader) / train_args.batch_size)
     for epoch in range(start_epoch, train_args.epochs + 1):
         if (epoch - 1) % 5 == 0:
             logging.info(datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"))
+        logger.info(f"epoch {epoch}")
         loss_ = torch.tensor([0], dtype=torch.float32, device=train_args.device, requires_grad=False)
         with tqdm(total=batch_sum, unit_scale=True, unit=" batch", colour="cyan", ncols=80) as pbar:
             for i, (images, gts) in enumerate(train_dataloader):
@@ -124,8 +125,10 @@ def trainer(train_args: argparse, logger):
                 # gts (batch_size, height, width)
                 images = images.to(train_args.device)
                 if i == 0 and epoch == 1:
+                    train_args.model.eval()
                     writer_model.add_graph(train_args.model, images)
                     writer_model.close()
+                    train_args.model.train()
                 gts = gts.to(train_args.device)
                 optimizer.zero_grad()
                 # predictions (batch_size, n_class, height, width)
@@ -133,33 +136,31 @@ def trainer(train_args: argparse, logger):
                 loss = criterion(predictions, gts)
                 loss.backward()
                 optimizer.step()
-                with torch.no_grad():
-                    loss_ += loss
-                    evaluator.accumulate(torch.argmax(predictions, dim=1), gts)
+                loss_ += loss
+                evaluator.accumulate(torch.argmax(predictions, dim=1), gts)
                 pbar.update()
 
         loss_ /= batch_sum
-        logger.info(f"epoch: {epoch}  train_loss: {round(loss_.item(), 5)}")
         evaluator.compute_mean()
-        evaluator.clear()
+        train_metrics = evaluator.get_metrics()
+        logger.info("train_loss:{}  train_iou: {}  current_lr: {}".format(
+            round(loss_.item(), 5),
+            train_metrics["iou"],
+            scheduler.get_lr()
+        ))
         scheduler.step(loss_, epoch)
-        logger.info("train miou: {}  train iou: {}  current_lr: {}"
-                    .format(evaluator.get_metrics()["miou"],
-                            evaluator.get_metrics()["iou"],
-                            scheduler.get_lr()))
+        logger.info("")
         if epoch % 1 == 0:
             # validation, save model has best valid miou
             with torch.no_grad():
                 valid_metrics = valider(train_args, logger)
                 if valid_metrics["iou"] > best_valid_metric:
                     best_valid_metric = valid_metrics["iou"]
-                    logger.info("valid miou: {}  valid iou: {}  best iou: {}".
-                                format(valid_metrics["miou"], valid_metrics["iou"], best_valid_metric))
+                    logger.info("valid iou: {}  best iou: {}".
+                                format(valid_metrics["iou"], best_valid_metric))
                     # save model
                     torch.save(train_args.model.state_dict(),
                                os.path.join(save_model_path, "model.pth"))
-                    logger.info(f"epoch {epoch} best model saved successfully")
-                    train_args.model.train()
                     # whether to save checkpoint or not
                     if train_args.check_point_mode in ["save", "load"]:
                         torch.save({
@@ -170,15 +171,16 @@ def trainer(train_args: argparse, logger):
                             "optimizer_state_dict": optimizer.state_dict(),
                             "scheduler_state_dict": scheduler.state_dict()
                         }, save_checkpoint_path)
-                        logger.info(f"epoch {epoch} checkpoint saved successfully")
+                        logger.info(f"--------------- epoch {epoch} model, checkpoint "
+                                    f"saved successfully ---------------")
         logger.info("")
-        writer_metrics.add_scalars("valid_metrics", {
+        writer_metrics.add_scalars("", {
             "train_loss": round(loss_.item(), 5),
-            "train_miou": evaluator.get_metrics()["miou"],
-            "valid_miou": valid_metrics["miou"],
-            "valid_iou ": valid_metrics["iou"]
+            "train_iou": train_metrics["iou"],
+            "valid_iou": valid_metrics["iou"]
         }, epoch)
         writer_metrics.flush()
+        evaluator.clear()
     writer_metrics.close()
 
 
@@ -194,6 +196,8 @@ if __name__ == "__main__":
             f.write("\n")
     elif Args.check_point_mode == "load":
         logger.info("----------Load Checkpoint, Restarting----------")
-    logger.info(Args.origin)
+    for key in Args.origin.keys():
+        logger.info(f"{key}: {Args.origin[key]}")
+    logger.info("")
     trainer(Args, logger)
 

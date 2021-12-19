@@ -215,3 +215,9 @@ writer = SummaryWriter("./tensorboard_info/")
 #
 # a = torch.from_numpy(np.array(a)).float().cuda()
 # print(a)
+
+
+a = torch.tensor([2]).cuda()
+b = a
+a = torch.tensor([5])
+print(b)
