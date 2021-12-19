@@ -60,7 +60,7 @@ class ComputerVisionTestLoader:
 
         self.kernel = torch.ones(self.chipsize, self.chipsize, dtype=torch.float32, device=self.device)
         half_stride = self.stride // 2
-        self.kernel[half_stride:-half_stride, half_stride:-half_stride] = 10
+        self.kernel[half_stride:-half_stride, half_stride:-half_stride] = 15
 
     def prepare_chip_information(self):
         """ prepare chip information, saved in self.chip_information """

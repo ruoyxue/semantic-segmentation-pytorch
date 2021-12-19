@@ -215,4 +215,3 @@ writer = SummaryWriter("./tensorboard_info/")
 #
 # a = torch.from_numpy(np.array(a)).float().cuda()
 # print(a)
-print(len(torch.arange(10)))

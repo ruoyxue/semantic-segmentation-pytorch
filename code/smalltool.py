@@ -8,16 +8,19 @@ from tqdm import tqdm
 import imagesize
 from numba import njit
 from torch import nn
+import warnings
 import torch
+import pandas as pd
 
 
 def label_category_find():
     # calculate all the categories of label
+    gt_path = "../dataset/semantic_segmentation/label"
     print("label_category_find")
     labels = []
     count = 0
-    for label_name in os.listdir("../dataset/semantic_segmentation/label"):
-        tem = (cv2.imread(os.path.join("../dataset/semantic_segmentation/label", label_name)))
+    for label_name in os.listdir(gt_path):
+        tem = (cv2.imread(os.path.join(gt_path, label_name)))
         labels += list(np.unique(tem[:, :, 2]))
         count += 1
         print(count)
@@ -137,7 +140,7 @@ def compute_rgb_mean_std():
     print("B_std:", B_std_final)
 
 
-def data_clean():
+def data_clan():
     """ we put messy data into image and gt, perform label transform, with same name """
     data_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/clean"
     save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin"
@@ -258,11 +261,74 @@ def statistic_image_size():
     print(image_size_dict)
 
 
+def split_data_csv():
+    """ split original data to train, valid, test due to given csv files """
+    # csv files should be named after train.csv, valid.csv, test.csv
+    csv_dir_path = "./csv"
+    origin_data_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe"
+    save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/segmented"
+
+    print("split data according to csv")
+    if not os.path.exists(save_path):
+        for dir_name in ["train", "valid", "test"]:
+            os.makedirs(os.path.join(save_path, dir_name, "image"))
+            os.makedirs(os.path.join(save_path, dir_name, "gt"))
+            if len(os.listdir(os.path.join(save_path, dir_name, "image"))) != 0 or \
+               len(os.listdir(os.path.join(save_path, dir_name, "gt"))) != 0:
+                raise RuntimeError(f"save path {os.path.join(save_path, dir_name)} is not empty")
+
+    train_csv = pd.read_csv(os.path.join(csv_dir_path, "train.csv"))
+    valid_csv = pd.read_csv(os.path.join(csv_dir_path, "valid.csv"))
+    test_csv = pd.read_csv(os.path.join(csv_dir_path, "test.csv"))
+    origin_image_name_list = os.listdir(os.path.join(origin_data_path, "image"))
+
+    with tqdm(total=len(train_csv)+len(valid_csv)+len(test_csv)) as pbar:
+        for i in range(len(train_csv)):
+            csv_image_name = os.path.basename(train_csv.iloc[i][0])
+            for origin_image_name in origin_image_name_list:
+                if origin_image_name.split(".")[0] == csv_image_name.split("_")[0]:
+                    shutil.copy2(os.path.join(os.path.join(origin_data_path, "image", origin_image_name)),
+                                 os.path.join(os.path.join(save_path, "train", "image", origin_image_name)))
+                    shutil.copy2(os.path.join(os.path.join(origin_data_path, "gt", origin_image_name)),
+                                 os.path.join(os.path.join(save_path, "train", "gt", origin_image_name)))
+                    pbar.update()
+                    break
+
+        for i in range(len(valid_csv)):
+            csv_image_name = os.path.basename(valid_csv.iloc[i][0])
+            for origin_image_name in origin_image_name_list:
+                if origin_image_name.split(".")[0] == csv_image_name.split("_")[0]:
+                    shutil.copy2(os.path.join(os.path.join(origin_data_path, "image", origin_image_name)),
+                                 os.path.join(os.path.join(save_path, "valid", "image", origin_image_name)))
+                    shutil.copy2(os.path.join(os.path.join(origin_data_path, "gt", origin_image_name)),
+                                 os.path.join(os.path.join(save_path, "valid", "gt", origin_image_name)))
+                    pbar.update()
+                    break
+
+        for i in range(len(test_csv)):
+            csv_image_name = os.path.basename(test_csv.iloc[i][0])
+            for origin_image_name in origin_image_name_list:
+                if origin_image_name.split(".")[0] == csv_image_name.split("_")[0]:
+                    shutil.copy2(os.path.join(os.path.join(origin_data_path, "image", origin_image_name)),
+                                 os.path.join(os.path.join(save_path, "test", "image", origin_image_name)))
+                    shutil.copy2(os.path.join(os.path.join(origin_data_path, "gt", origin_image_name)),
+                                 os.path.join(os.path.join(save_path, "test", "gt", origin_image_name)))
+                    pbar.update()
+                    break
+    print(f"csv info: train: {len(train_csv)}  valid: {len(valid_csv)}  test: {len(test_csv)}")
+    print("save info: train: {}  valid: {}  test: {}".format(
+        len(os.listdir(os.path.join(save_path, "train", "image"))),
+        len(os.listdir(os.path.join(save_path, "valid", "image"))),
+        len(os.listdir(os.path.join(save_path, "test", "image")))
+    ))
+
+
 if __name__ == "__main__":
     # data_clean()
     # data_split()
-    statistic_image_size()
+    # statistic_image_size()
     # compute_rgb_mean_std()
     # label_statistics()
     # find_damaged_label()
+    split_data_csv()
     pass
