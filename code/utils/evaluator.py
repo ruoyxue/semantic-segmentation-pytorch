@@ -54,7 +54,7 @@ class SegmentationEvaluator:
     """
     def __init__(self, true_label: torch.Tensor):
         self._count = 0  # count times of accumulation
-        self._metrics: dict = {"miou": 0}  # save metrics
+        self._metrics: dict = {"miou": 0, "iou": 0}  # save metrics
         self._true_label = true_label
 
     def accumulate(self, preds: torch.tensor, gts: torch.tensor):

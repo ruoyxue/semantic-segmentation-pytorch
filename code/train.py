@@ -61,7 +61,6 @@ def valider(train_args: argparse, logger):
                 evaluator.accumulate(whole_label, gt.to(train_args.device))
             pbar.update()
     evaluator.compute_mean()
-    logger.info("valid miou: {}".format(evaluator.get_metrics()["miou"]))
     return evaluator.get_metrics()["miou"]
 
 
@@ -83,7 +82,7 @@ def trainer(train_args: argparse, logger):
     optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-5)
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
     #                                                  min_lr=1e-6, threshold=1e-3, verbose=True)
-    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.5, patience=5, min_lr=1e-6,
+    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.25, patience=2, min_lr=1e-6,
                                    threshold=5e-4, warmup_duration=20)
     if train_args.check_point_mode == "save":
         with open(os.path.join(train_args.exp_path, "config.yml"), "a") as f:
@@ -143,15 +142,17 @@ def trainer(train_args: argparse, logger):
         loss_ /= batch_sum
         logger.info(f"epoch: {epoch}    train_loss: {round(loss_.item(), 5)}")
         evaluator.compute_mean()
-        logger.info("train miou: {}".format(evaluator.get_metrics()["miou"]))
         evaluator.clear()
         scheduler.step(loss_, epoch)
+        logger.info("train miou: {}   current_lr: {}"
+                    .format(evaluator.get_metrics()["miou"], scheduler.get_lr()))
         if epoch % 1 == 0:
             # validation, save model has best valid miou
             with torch.no_grad():
                 current_miou = valider(train_args, logger)
                 if current_miou > best_valid_miou:
                     best_valid_miou = current_miou
+                    logger.info("valid miou: {}    best miou: {}".format(current_miou, best_valid_miou))
                     # save model
                     torch.save(train_args.model.state_dict(),
                                os.path.join(save_model_path, "model.pth"))

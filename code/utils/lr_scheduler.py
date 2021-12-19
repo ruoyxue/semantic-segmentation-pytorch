@@ -97,7 +97,7 @@ class PlateauLRScheduler:
             "min_lr": self.min_lr,
             "threshold": self.threshold,
             "warmup_duration": self.warmup_duration,
-            "warmup_count": self._warmup_count,
+            "_warmup_count": self._warmup_count,
             "_bad_count": self._bad_count,
             "best_metric": self.best_metric,
             "current_lr": self.current_lr,
@@ -115,3 +115,6 @@ class PlateauLRScheduler:
             "Scheduler load, optimizer has different initial_lr({}) with that in input dict({})"\
             .format(self.initial_lr, state_dict["initial_lr"])
         self.__dict__.update(state_dict)
+
+    def get_lr(self):
+        return round(self.current_lr, 5)

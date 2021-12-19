@@ -58,7 +58,7 @@ def tester(test_args: argparse, logger):
                 cv2.imwrite(os.path.join(save_output_path, image_name), whole_label.cpu().numpy())
             pbar.update()
     evaluator.compute_mean()
-    logger.info("validation miou: {}".format(evaluator.get_metrics()["miou"]))
+    logger.info("test miou: {}".format(evaluator.get_metrics()["miou"]))
     logger.info("count = {}".format(whole_image_count))
 
 
