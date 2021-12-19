@@ -95,7 +95,7 @@ def trainer(train_args: argparse, logger):
     logger.info("done")
 
     # 2. ---------------------------whether to load checkpoint-------------------------------------------
-    writer_metrics = SummaryWriter(os.path.join(save_tensorboard_path, "metrics"))
+    writer_metrics = SummaryWriter(os.path.join(save_tensorboard_path, "valid_metrics"))
     writer_model = SummaryWriter(os.path.join(save_tensorboard_path, "model"))
     start_epoch = 1  # range(start_epoch, epochs + 1) which works for loading checkpoint
     best_valid_metric = 0  # record best valid metric
@@ -148,11 +148,11 @@ def trainer(train_args: argparse, logger):
         if epoch % 1 == 0:
             # validation, save model has best valid miou
             with torch.no_grad():
-                metrics = valider(train_args, logger)
-                if metrics["iou"] > best_valid_metric:
-                    best_valid_metric = metrics["iou"]
-                    logger.info("valid miou: {}  valid iou: {}  best miou: {}".\
-                                format(metrics["miou"], metrics["iou"], best_valid_metric))
+                valid_metrics = valider(train_args, logger)
+                if valid_metrics["iou"] > best_valid_metric:
+                    best_valid_metric = valid_metrics["iou"]
+                    logger.info("valid miou: {}  valid iou: {}  best iou: {}".
+                                format(valid_metrics["miou"], valid_metrics["iou"], best_valid_metric))
                     # save model
                     torch.save(train_args.model.state_dict(),
                                os.path.join(save_model_path, "model.pth"))
@@ -170,11 +170,11 @@ def trainer(train_args: argparse, logger):
                         }, save_checkpoint_path)
                         logger.info(f"epoch {epoch} checkpoint saved successfully")
         logger.info("")
-        writer_metrics.add_scalars("metrics", {
+        writer_metrics.add_scalars("valid_metrics", {
             "train_loss": round(loss_.item(), 5),
             "train_miou": evaluator.get_metrics()["miou"],
-            "valid_miou": metrics["miou"],
-            "valid_iou ": metrics["iou"]
+            "valid_miou": valid_metrics["miou"],
+            "valid_iou ": valid_metrics["iou"]
         }, epoch)
         writer_metrics.flush()
     writer_metrics.close()
