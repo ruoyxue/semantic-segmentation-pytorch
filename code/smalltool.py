@@ -261,12 +261,12 @@ def statistic_image_size():
     print(image_size_dict)
 
 
-def split_data_csv():
+def data_split_csv():
     """ split original data to train, valid, test due to given csv files """
     # csv files should be named after train.csv, valid.csv, test.csv
-    csv_dir_path = "./csv"
-    origin_data_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe"
-    save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/segmented"
+    csv_dir_path = "/data/xueruoyao/csv"
+    origin_data_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin"
+    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented"
 
     print("split data according to csv")
     if not os.path.exists(save_path):
@@ -282,7 +282,7 @@ def split_data_csv():
     test_csv = pd.read_csv(os.path.join(csv_dir_path, "test.csv"))
     origin_image_name_list = os.listdir(os.path.join(origin_data_path, "image"))
 
-    with tqdm(total=len(train_csv)+len(valid_csv)+len(test_csv)) as pbar:
+    with tqdm(total=len(train_csv)+len(valid_csv)+len(test_csv), unit=" img") as pbar:
         for i in range(len(train_csv)):
             csv_image_name = os.path.basename(train_csv.iloc[i][0])
             for origin_image_name in origin_image_name_list:
@@ -330,5 +330,5 @@ if __name__ == "__main__":
     # compute_rgb_mean_std()
     # label_statistics()
     # find_damaged_label()
-    split_data_csv()
+    data_split_csv()
     pass

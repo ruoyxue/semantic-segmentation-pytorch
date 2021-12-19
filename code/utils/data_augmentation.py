@@ -8,6 +8,7 @@ import tensorflow as tf
 from typing import Tuple, Union
 import logging
 from tqdm import tqdm
+import random
 
 
 def rotate(image, label, angle):
@@ -189,8 +190,9 @@ if __name__ == "__main__":
         for image_name in os.listdir(image_path):
             img = cv2.imread(os.path.join(image_path, image_name))
             gt = cv2.imread(os.path.join(label_path, image_name))
-            mosaic_image_list.append(img)
-            mosaic_label_list.append(gt)
+            if random.randint(0, 1):
+                mosaic_image_list.append(img)
+                mosaic_label_list.append(gt)
 
             if len(mosaic_image_list) == 4:
                 num += 1
@@ -199,7 +201,7 @@ if __name__ == "__main__":
                 mosaic_label_list.clear()
                 cv2.imwrite(os.path.join(save_path, "image", "{}.png".format(num)), image_mosaic)
                 cv2.imwrite(os.path.join(save_path, "gt", "{}.png".format(num)), label_mosaic)
-            for _ in range(2):
+            for _ in range(4):
                 chip_img, chip_gt = random_crop(img, gt, final_size)
                 random_angle = np.random.choice([0, 90, 180, 270])
                 random_flip = np.random.choice([-1, 0, 1])
