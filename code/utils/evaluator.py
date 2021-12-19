@@ -64,11 +64,18 @@ class SegmentationEvaluator:
         """
         assert preds.shape == gts.shape,\
             "evaluator preds.shape != labels.shape"
-        n = preds.shape[0]
-        for i in range(n):
+        if preds.dim() == 3:  # train
+            n = preds.shape[0]
+            for i in range(n):
+                self._count += 1
+                self._metrics["miou"] += self.mean_iou(preds[i, :, :], gts[i, :, :])
+                self._metrics["iou"] += self.iou(preds[i, :, :], gts[i, :, :], pos_label=1)
+        elif preds.dim() == 2:  # test
             self._count += 1
-            self._metrics["miou"] += self.mean_iou(preds[i, :, :], gts[i, :, :])
-            self._metrics["iou"] += self.iou(preds[i, :, :], gts[i, :, :], pos_label=1)
+            self._metrics["miou"] += self.mean_iou(preds, gts)
+            self._metrics["iou"] += self.iou(preds, gts, pos_label=1)
+        else:
+            raise RuntimeError(f"evaluator accumulate function expects input of dim 2 or 3, got {preds.dim()}")
 
     def get_metrics(self):
         return self._metrics
