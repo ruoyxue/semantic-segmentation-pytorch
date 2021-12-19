@@ -139,12 +139,14 @@ def trainer(train_args: argparse, logger):
                 pbar.update()
 
         loss_ /= batch_sum
-        logger.info(f"epoch: {epoch}    train_loss: {round(loss_.item(), 5)}")
+        logger.info(f"epoch: {epoch}  train_loss: {round(loss_.item(), 5)}")
         evaluator.compute_mean()
         evaluator.clear()
         scheduler.step(loss_, epoch)
-        logger.info("train miou: {}   current_lr: {}"
-                    .format(evaluator.get_metrics()["miou"], scheduler.get_lr()))
+        logger.info("train miou: {}  train iou: {}  current_lr: {}"
+                    .format(evaluator.get_metrics()["miou"],
+                            evaluator.get_metrics()["iou"],
+                            scheduler.get_lr()))
         if epoch % 1 == 0:
             # validation, save model has best valid miou
             with torch.no_grad():

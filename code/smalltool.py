@@ -55,7 +55,7 @@ def label_statistics_help(mask, counts: list):
 def label_statistics():
     """ compute each label has how many pixels, labels should be [0, 1, 2...] """
     print("label statistics")
-    gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/gt"
+    gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented/train/gt"
     label = [0, 1]
     counts = np.zeros(len(label))
     with tqdm(total=len(os.listdir(gt_path))) as pbar:
@@ -326,9 +326,9 @@ def data_split_csv():
 if __name__ == "__main__":
     # data_clean()
     # data_split()
-    statistic_image_size()
+    # statistic_image_size()
     # compute_rgb_mean_std()
-    # label_statistics()
+    label_statistics()
     # find_damaged_label()
     # data_split_csv()
     pass
