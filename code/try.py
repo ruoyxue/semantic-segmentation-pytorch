@@ -17,8 +17,7 @@ from utils import PNGTestloader
 from utils import PNGTrainloader, TIFFTrainloader, PlateauLRScheduler, LogSoftmaxCELoss
 from ruamel import yaml
 from torch.utils.tensorboard import SummaryWriter
-from models import UNet, FCN8s
-import torchsummary
+from models import UNet
 
 
 image_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/original/image"
@@ -131,14 +130,14 @@ info_dict = {
 # logger.addHandler(file_handler)
 # logging.info("info hello")
 
-# model = nn.Sequential(nn.Linear(3, 64),
-#                       nn.Linear(64, 128))
-# optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
-# optimizer2 = torch.optim.SGD(model.parameters(), lr=0.2, momentum=0.9, weight_decay=1e-5)
-# scheduler = PlateauLRScheduler(optimizer, patience=2, min_lr=1e-3, lr_factor=0.75,
-#                                warmup_duration=20)
-# scheduler2 = PlateauLRScheduler(optimizer2, patience=5, min_lr=1e-6, lr_factor=0.25,
-#                                warmup_duration=20)
+model = nn.Sequential(nn.Linear(3, 64),
+                      nn.Linear(64, 128))
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
+optimizer2 = torch.optim.SGD(model.parameters(), lr=0.2, momentum=0.9, weight_decay=1e-5)
+scheduler = PlateauLRScheduler(optimizer, patience=2, min_lr=1e-3, lr_factor=0.75,
+                               warmup_duration=20)
+scheduler2 = PlateauLRScheduler(optimizer2, patience=5, min_lr=1e-6, lr_factor=0.25,
+                               warmup_duration=20)
 
 # # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 2)
 #
@@ -187,19 +186,19 @@ writer = SummaryWriter("./tensorboard_info/")
 
 #
 
-# loss = 1
-# acc = 0
-# for epoch in range(1000):
-#     time.sleep(1)
-#     loss += 8
-#     acc += 10
-#     print(epoch)
-#     writer.add_scalars("metrics", {
-#         "loss": loss,
-#         "acc": acc
-#     }, epoch)
-#
-#     writer.flush()
+loss = 1
+acc = 0
+for epoch in range(1000):
+    time.sleep(1)
+    loss += 8
+    acc += 10
+    print(epoch)
+    writer.add_scalars("metrics", {
+        "loss": loss,
+        "acc": acc
+    }, epoch)
+
+    writer.flush()
 #
 #
 # writer.close()
@@ -216,9 +215,3 @@ writer = SummaryWriter("./tensorboard_info/")
 #
 # a = torch.from_numpy(np.array(a)).float().cuda()
 # print(a)
-input = torch.randn([4, 3, 256, 256])
-# model = UNet(3, 2)
-model = FCN8s(2)
-# print(torchsummary.summary(model, (3, 256, 256), 4))
-writer.add_graph(model, input)
-writer.close()

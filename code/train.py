@@ -82,8 +82,8 @@ def trainer(train_args: argparse, logger):
     optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-5)
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
     #                                                  min_lr=1e-6, threshold=1e-3, verbose=True)
-    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.25, patience=2, min_lr=1e-6,
-                                   threshold=5e-4, warmup_duration=20)
+    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.25, patience=5, min_lr=1e-6,
+                                   threshold=1e-3, warmup_duration=20)
     if train_args.check_point_mode == "save":
         with open(os.path.join(train_args.exp_path, "config.yml"), "a") as f:
             yaml.dump({"optimizer": {"type": str(type(optimizer)), "state_dict": optimizer.state_dict()}}, f)
