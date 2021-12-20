@@ -1,10 +1,10 @@
-pytorch deep learning framework
+pytorch deep learning framework----semantic segmentation
 
-contains model: FCN
+contains model: FCN、UNet、MLP
 
 use command below to run the project
 
 ```
-sh code/Run.sh
+sh code/run.sh
 ```
 

@@ -14,6 +14,7 @@ TODO: add distributive training
 TODO: add gradient accumulation to upgrade gradients after a few epochs
       (use small batchsize to simulate larger one)
 TODO: add pretrained parameters to models
+TODO: replace static data augmentation with dynamic ones, and pack functions in .py file into a class
 """
 
 import datetime
