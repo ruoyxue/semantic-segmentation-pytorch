@@ -89,9 +89,9 @@ def trainer(train_args: argparse, logger):
         with open(os.path.join(train_args.exp_path, "config.yml"), "a") as f:
             yaml.dump({"optimizer": {"type": str(type(optimizer)), "state_dict": optimizer.state_dict()}}, f)
             f.write("\n")
-            yaml.dump({"scheduler": scheduler.state_dict()}, f)
+            yaml.dump({"scheduler": scheduler.state_dict()}, f, Dumper=yaml.RoundTripDumper)
             f.write("\n")
-            yaml.dump({"loss": criterion.state_dict()}, f)
+            yaml.dump({"loss": criterion.state_dict()}, f, Dumper=yaml.RoundTripDumper)
             f.write("\n")
     logger.info("done")
 
@@ -113,7 +113,7 @@ def trainer(train_args: argparse, logger):
         checkpoint["scheduler_state_dict"]["warmup_duration"] = 20
         logging.info("-----------revise scheduler patience=2, min_lr=1e-6, "
                      "threshold=1e-2, warmup_duration=20-----------")
-
+        checkpoint["best_valid_epoch"] = 51
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         best_valid_metric = checkpoint["best_valid_metric"]
         best_valid_epoch = checkpoint["best_valid_epoch"]
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     if Args.check_point_mode == "save":
         shutil.copytree(os.getcwd(), os.path.join(Args.exp_path, "code"))
         with open(os.path.join(Args.exp_path, "config.yml"), "a") as f:
-            yaml.dump({"args": Args.origin}, f)
+            yaml.dump({"args": Args.origin}, f, Dumper=yaml.RoundTripDumper)
             f.write("\n")
     elif Args.check_point_mode == "load":
         logger.info("----------Load Checkpoint, Restarting----------")

@@ -9,18 +9,18 @@ if [ $mode -eq 0 ];
 then
 echo "------------Training Process------------" 
 python train.py \
---model fcn8s \
+--model unet \
 --epochs 300 \
---random_seed 234324 \
+--random_seed 422432 \
 --n_class 2 \
 --chip_size 512 \
 --stride 256 \
---batch_size 16 \
---lr 0.001 \
---device cuda:6 \
+--batch_size 8 \
+--lr 0.01 \
+--device cuda:7 \
 --train_data_path /data/xueruoyao/dataset/road_extraction/deepglobe/segmented/train \
 --valid_data_path /data/xueruoyao/dataset/road_extraction/deepglobe/segmented/valid \
---exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/FCN8s \
+--exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/UNet \
 --check_point_mode save \
 
 elif [ $mode -eq 1 ];
