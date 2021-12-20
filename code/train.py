@@ -106,11 +106,13 @@ def trainer(train_args: argparse, logger):
         criterion.load_state_dict(checkpoint["criterion_state_dict"])
         criterion.to(train_args.device)
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        
+
         checkpoint["scheduler_state_dict"]["patience"] = 2
         checkpoint["scheduler_state_dict"]["min_lr"] = 1e-6
         checkpoint["scheduler_state_dict"]["threshold"] = 1e-2
         checkpoint["scheduler_state_dict"]["warmup_duration"] = 20
+        logging.info("-----------revise scheduler patience=2, min_lr=1e-6, "
+                     "threshold=1e-2, warmup_duration=20-----------")
 
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         best_valid_metric = checkpoint["best_valid_metric"]
