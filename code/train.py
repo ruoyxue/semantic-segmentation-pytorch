@@ -98,6 +98,7 @@ def trainer(train_args: argparse, logger):
     # 2. ---------------------------whether to load checkpoint-------------------------------------------
     start_epoch = 1  # range(start_epoch, epochs + 1) which works for loading checkpoint
     best_valid_metric = 0  # record best valid metric
+    best_valid_epoch = 1
     if train_args.check_point_mode == "load":
         logger.info("load state_dict of model, optimizer, scheduler, loss")
         checkpoint = torch.load(save_checkpoint_path)
@@ -107,6 +108,7 @@ def trainer(train_args: argparse, logger):
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         best_valid_metric = checkpoint["best_valid_metric"]
+        best_valid_epoch = checkpoint["best_valid_epoch"]
         start_epoch += checkpoint["epoch"]
         logger.info("done")
 
@@ -157,8 +159,10 @@ def trainer(train_args: argparse, logger):
                 valid_metrics = valider(train_args, logger)
                 if valid_metrics["iou"] > best_valid_metric:
                     best_valid_metric = valid_metrics["iou"]
-                    logger.info("valid iou: {}  best iou: {}".
-                                format(valid_metrics["iou"], best_valid_metric))
+                    best_valid_epoch = epoch
+                logger.info("valid iou: {}  best iou: {}  best valid epoch: {}" .
+                            format(valid_metrics["iou"], best_valid_metric, best_valid_epoch))
+                if valid_metrics["iou"] > best_valid_metric:
                     # save model
                     torch.save(train_args.model.state_dict(),
                                os.path.join(save_model_path, "model.pth"))
@@ -167,6 +171,7 @@ def trainer(train_args: argparse, logger):
                         torch.save({
                             "epoch": epoch,
                             "best_valid_metric": best_valid_metric,
+                            "best_valid_epoch": best_valid_epoch,
                             "model_state_dict": train_args.model.state_dict(),
                             "criterion_state_dict": criterion.state_dict(),
                             "optimizer_state_dict": optimizer.state_dict(),
