@@ -12,7 +12,7 @@ import torch
 import cv2
 import os
 import datetime
-from torchvision import transforms
+import utils.preprocessing as prepro
 from typing import List, Callable, Optional, Tuple
 import rasterio
 import imagesize
@@ -25,14 +25,13 @@ class ComputerVisionTestLoader:
     :param batch_size: how many samples per batch to load
     :param preprocessing: if not None, use preprocessing function after loading
     :param device: where to stitch images
-
-    Note: we save all chip images information in self.chip_information in form of
-          (image_index, height_coord, width_coord)
-
     :cvar whole_image: record current corresponding image when stitching
     :cvar current_image_index: record current image index
     :cvar kernel: add higher weights for pixels which are in the center, in order to mitigate edge effects
-    :cvar count: accumulate all the weights kernel adds, in order to normalise at the end
+    :cvar count: accumulate all the weight kernel addition, in order to normalise at the end
+
+    Note: we save all chip images information in self.chip_information in form of
+          (image_index, height_coord, width_coord)
     """
     whole_image: torch.tensor = None
     current_image_index: int = None
@@ -51,13 +50,12 @@ class ComputerVisionTestLoader:
         self.batch_size = batch_size
         self.preprocessing = preprocessing
         self.chip_information = []
-        self.normalisation = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=(0.28806, 0.38247, 0.40955), std=(0.12476, 0.12818, 0.15762))  # B, G, R
+        self.preprocessing = prepro.ProcessingSequential([
+            # prepro.Normalize(mean=(73.4711, 97.6228, 104.4753), std=(31.2603, 32.3015, 39.8499)),
+            prepro.ToTensor()
         ])
         self.prepare_chip_information()
         # kernel setting
-
         self.kernel = torch.ones(self.chipsize, self.chipsize, dtype=torch.float32, device=self.device)
         half_stride = self.stride // 2
         self.kernel[half_stride:-half_stride, half_stride:-half_stride] = 15
@@ -101,14 +99,18 @@ class ComputerVisionTestLoader:
         """
         chip_info = self.chip_information[start_index: end_index]
         index = chip_info[0][0]  # record current image index (large image)
-        image = self.normalisation(self.load(self.image_path_list[index]))  # (channel, height, width)
+        image = self.load(self.image_path_list[index])
+        # we need to use tem, because our preprocessing sequence must have two inputs
+        image, _ = self.preprocessing(image)
+        image = image.permute([2, 0, 1])
         distributed_images = []  # record chipped images to be distributed
 
         # load image and chip, info: (image_index, height_coord, width_coord)
         for info in chip_info:
             if info[0] != index:  # means need to load another image to chip
                 index = info[0]
-                image = self.normalisation(self.load(self.image_path_list[index]))
+                image, _ = self.preprocessing(self.load(self.image_path_list[index]))
+                image = image.permute([2, 0, 1])
             distributed_images.append(
                 image[:, info[1]: info[1]+self.chipsize, info[2]: info[2]+self.chipsize])
 

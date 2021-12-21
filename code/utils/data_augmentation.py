@@ -1,3 +1,6 @@
+"""
+Static data augmentation
+"""
 import cv2
 import os
 import numpy as np
@@ -6,7 +9,6 @@ import imutils
 import torch
 import tensorflow as tf
 from typing import Tuple, Union
-import logging
 from tqdm import tqdm
 import random
 

@@ -14,13 +14,13 @@ python train.py \
 --n_class 2 \
 --chip_size 256 \
 --stride 128 \
---batch_size 4 \
+--batch_size 2 \
 --lr 0.001 \
 --device cuda:0 \
---train_data_path /home/xueruoyao/Documents/PythonProgram/dataset/segmented/train \
---valid_data_path /home/xueruoyao/Documents/PythonProgram/dataset/segmented/valid \
+--train_data_path /home/xueruoyao/Documents/PythonProgram/dataset/new/train \
+--valid_data_path /home/xueruoyao/Documents/PythonProgram/dataset/new/valid \
 --exp_path /home/xueruoyao/Documents/PythonProgram/exp/UNet \
---check_point_mode load \
+--check_point_mode save \
 
 elif [ $mode -eq 1 ];
 then

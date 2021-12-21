@@ -14,6 +14,7 @@ from typing import List, Callable, Optional, Tuple
 import rasterio
 import torch.nn as nn
 from torchvision import transforms
+import utils.preprocessing as prepro
 
 
 class ComputerVisionTrainLoader:
@@ -23,25 +24,27 @@ class ComputerVisionTrainLoader:
     :param batch_size: how many samples per batch to load
     :param drop_last: if True, drop the last incomplete batch,
     :param shuffle: if True, shuffle data in __iter__
+    :param chip_size: control random crop in preprocessing
 
     Note: by default, we set image's name and label's name to be the same,
           it's suggested that you set your own way via method
           `prepare_image_name_list`
     """
     def __init__(self, image_path: str, gt_path: str, batch_size: int = 1,
-                 drop_last: bool = False, shuffle: bool = False,
-                 preprocessing_flag: bool = False):
+                 drop_last: bool = False, shuffle: bool = False, chip_size: int = 512):
         self.image_path = image_path
         self.gt_path = gt_path
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.shuffle = shuffle
-        self.preprocessing_flag = preprocessing_flag
         self.image_path_list = []
-        self.label_path_list = []
-        self.normalisation = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=(0.28806, 0.38247, 0.40955), std=(0.12476, 0.12818, 0.15762))  # B, G, R
+        self.gt_path_list = []
+        self.preprocessing = prepro.ProcessingSequential([
+            prepro.RandomCrop(chip_size=chip_size),
+            prepro.RandomRotate(random_choice=[0, 90, 180, 270]),
+            prepro.RandomFlip(random_choice=[-1, 0, 1]),
+            prepro.Normalize(mean=(73.4711, 97.6228, 104.4753), std=(31.2603, 32.3015, 39.8499)),
+            prepro.ToTensor()
         ])
         self.prepare_image_label_list()
 
@@ -55,7 +58,7 @@ class ComputerVisionTrainLoader:
         for image_name in os.listdir(self.image_path):
             if os.path.exists(os.path.join(self.gt_path, image_name)):
                 self.image_path_list.append(os.path.join(self.image_path, image_name))
-                self.label_path_list.append(os.path.join(self.gt_path, image_name))
+                self.gt_path_list.append(os.path.join(self.gt_path, image_name))
         assert len(self.image_path) > 0, \
             "trainloader can't find images and labels to distribute, they must enjoy the same name"
 
@@ -73,21 +76,23 @@ class ComputerVisionTrainLoader:
 
     def fetcher(self, indices: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        return images and labels of given indices, with possible preprocessing,
+        return images and labels of given indices, with preprocessing,
         in shape (batch_size, channel, height, width)
         """
         images, labels = [], []
         for index in indices:
             image = self.load(self.image_path_list[index], "image")
-            label = self.load(self.label_path_list[index], "label")
-            images.append(self.normalisation(image))
-            labels.append(torch.tensor(label, dtype=torch.int64))
+            gt = self.load(self.gt_path_list[index], "gt")
+            image, gt = self.preprocessing(image, gt)
+            images.append(image.permute([2, 0, 1]))
+            labels.append(gt)
         return torch.stack(images, dim=0), torch.stack(labels, dim=0)
 
     def load(self, path: str, mode: str):
         """ load image/label
         :return data: np.array
-        Note: image:(B, G, R) (height, width, channel) label: (height, width)
+        image: (height, width, channel) (B, G, R)
+        label: (height, width)
          """
         raise NotImplementedError
 
@@ -96,37 +101,43 @@ class ComputerVisionTrainLoader:
             yield self.fetcher(indices)
 
     def __len__(self):
-        assert len(self.image_path_list) == len(self.label_path_list),\
+        assert len(self.image_path_list) == len(self.gt_path_list),\
             "image path list doesn't have the same len as label path list"
         return len(self.image_path_list)
+
+    def state_dict(self):
+        return {
+            "trainloader_type": str(type(self)),
+            "drop_last": self.drop_last,
+            "shuffle": self.shuffle,
+            "preprocessing": self.preprocessing.list_of_repr()
+        }
 
 
 class PNGTrainloader(ComputerVisionTrainLoader):
     """ subclass to read and solve png files """
     def __init__(self, image_path: str, gt_path: str, batch_size: int = 1,
-                 drop_last: bool = False, shuffle: bool = False,
-                 preprocessing_flag: bool = False):
-        super().__init__(image_path, gt_path, batch_size, drop_last, shuffle, preprocessing_flag)
+                 drop_last: bool = False, shuffle: bool = False, chip_size: int = 512):
+        super().__init__(image_path, gt_path, batch_size, drop_last, shuffle, chip_size)
 
     def load(self, path: str, mode: str) -> np.array:
         if mode == "image":
             return cv2.imread(path)
-        if mode == "label":
+        if mode == "gt":
             return cv2.imread(path)[:, :, 2]
 
 
 class TIFFTrainloader(ComputerVisionTrainLoader):
     """ subclass to read and solve tiff tiles """
     def __init__(self, image_path: str, gt_path: str, batch_size: int = 1,
-                 drop_last: bool = False, shuffle: bool = False,
-                 preprocessing_flag: bool = False):
-        super().__init__(image_path, gt_path, batch_size, drop_last, shuffle, preprocessing_flag)
+                 drop_last: bool = False, shuffle: bool = False, chip_size: int = 512):
+        super().__init__(image_path, gt_path, batch_size, drop_last, shuffle, chip_size)
 
     def load(self, path: str, mode: str) -> np.array:
         # return data has form of B, G, R
         if mode == "image":
             with rasterio.open(path) as data:
                 return cv2.merge([data.read(3), data.read(2), data.read(1)])
-        if mode == "label":
+        if mode == "gt":
             with rasterio.open(path) as data:
                 return data.read(1)

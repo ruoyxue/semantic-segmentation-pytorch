@@ -74,7 +74,8 @@ def trainer(train_args: argparse, logger):
     train_args.model.to(train_args.device)
     train_dataloader = PNGTrainloader(image_path=os.path.join(train_args.train_data_path, "image"),
                                       gt_path=os.path.join(train_args.train_data_path, "gt"),
-                                      batch_size=train_args.batch_size, drop_last=True, shuffle=True)
+                                      batch_size=train_args.batch_size, drop_last=True, shuffle=True,
+                                      chip_size=train_args.chip_size)
     criterion = LogSoftmaxCELoss(n_class=train_args.n_class, weight=torch.tensor([0.0431, 0.9569]),
                                  smoothing=0.002)
     # criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.0862, 1.9138], dtype=torch.float32))
@@ -92,6 +93,8 @@ def trainer(train_args: argparse, logger):
             yaml.dump({"scheduler": scheduler.state_dict()}, f, Dumper=yaml.RoundTripDumper)
             f.write("\n")
             yaml.dump({"loss": criterion.state_dict()}, f)
+            f.write("\n")
+            yaml.dump({"trainloader": train_dataloader.state_dict()}, f, Dumper=yaml.RoundTripDumper)
             f.write("\n")
     logger.info("done")
 

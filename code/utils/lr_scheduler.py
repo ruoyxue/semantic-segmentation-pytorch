@@ -2,9 +2,7 @@
 Different lr schedulers
 """
 import logging
-
 import torch
-import copy
 
 
 class PlateauLRScheduler:
@@ -65,7 +63,7 @@ class PlateauLRScheduler:
             if self._is_better(current_metric):
                 self.best_metric = current_metric
             self._warmup_count += 1
-            logging.info(f"Warm up adjust lr to {round(self.current_lr, 5)} for next epoch")
+            logging.info(f"Warm up adjust lr to {self.get_lr()} for next epoch")
         else:
             # common step
             if self._is_better(current_metric):
@@ -76,7 +74,7 @@ class PlateauLRScheduler:
                 if self._bad_count > self.patience and self.current_lr > self.min_lr:
                     self.current_lr = max(self.current_lr * self.lr_factor, self.min_lr)
                     self.optimizer.param_groups[0]["lr"] = self.current_lr
-                    logging.info(f"Reduce lr to {round(self.current_lr, 5)} for next epoch")
+                    logging.info(f"Reduce lr to {self.get_lr()} for next epoch")
                     self._bad_count = 0
 
     def _is_better(self, current_metric):
@@ -118,4 +116,4 @@ class PlateauLRScheduler:
         self.__dict__.update(state_dict)
 
     def get_lr(self):
-        return round(self.current_lr, 5)
+        return round(self.current_lr, 8)

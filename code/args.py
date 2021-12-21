@@ -1,5 +1,7 @@
 import os
 import logging
+import warnings
+
 import torch
 import argparse
 from models import *
@@ -123,6 +125,9 @@ class TrainArgs(Args):
             raise FileNotFoundError("Valid data directory '" + self.args.valid_data_path + "' is empty")
 
         # exp_path
+        if self.origin["model"].lower() not in os.path.basename(self.origin["exp_path"]).lower():
+            raise RuntimeError("selected model({}) is not compatible with exp_path({})".
+                               format(self.origin["model"], self.origin["exp_path"]))
         if self.args.check_point_mode != "load":
             if not os.path.exists(self.args.exp_path):
                 os.makedirs(self.args.exp_path)
@@ -211,6 +216,9 @@ class TestArgs(Args):
             raise FileNotFoundError("Test data directory '" + self.args.test_data_path + "' is empty")
 
         # exp_path
+        if self.origin["model"].lower() not in os.path.basename(self.origin["exp_path"]).lower():
+            raise RuntimeError("selected model({}) is not compatible with exp_path({})".
+                               format(self.origin["model"], self.origin["exp_path"]))
         if not os.path.exists(self.args.exp_path):
             raise FileNotFoundError(f"exp test path ({self.args.exp_path}) not exist")
         if os.path.exists(os.path.join(self.args.exp_path, "log_test.txt")):

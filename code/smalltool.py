@@ -76,7 +76,7 @@ def compute_rgb_mean_std():
     """ calculate mean and std of R, G, B channel """
     print("compute_rgb_mean_std")
     # image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
-    image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/segmented/train/image"
+    image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/image"
     image_name_list = os.listdir(image_path)
     image_count = len(image_name_list)
     r_mean_array, r_std_array = np.zeros(image_count), np.zeros(image_count)
@@ -98,27 +98,6 @@ def compute_rgb_mean_std():
             single_pixel_count[i] = rgb_img.shape[0] * rgb_img.shape[1]
             sum_pixel_count = sum_pixel_count + rgb_img.shape[0] * rgb_img.shape[1]
             pbar.update()
-    # R
-    mean_tem = 0
-    for i in range(len(os.listdir(image_path))):
-        mean_tem += single_pixel_count[i] * r_mean_array[i]
-    r_mean = mean_tem / sum_pixel_count
-    std_tem = 0
-    for i in range(len(os.listdir(image_path))):
-        std_tem += single_pixel_count[i] * (r_std_array[i]**2 + (r_mean - r_mean_array[i]) ** 2)
-    r_std = math.sqrt(std_tem / sum_pixel_count)
-    print("R_mean: {}  R_std: {}".format(r_mean, r_std))
-
-    # G
-    mean_tem = 0
-    for i in range(len(os.listdir(image_path))):
-        mean_tem += single_pixel_count[i] * g_mean_array[i]
-    g_mean = mean_tem / sum_pixel_count
-    std_tem = 0
-    for i in range(len(os.listdir(image_path))):
-        std_tem += single_pixel_count[i] * (g_std_array[i]**2 + (g_mean - g_mean_array[i]) ** 2)
-    g_std = math.sqrt(std_tem / sum_pixel_count)
-    print("G_mean: {}  G_std: {}".format(g_mean, g_std))
 
     # B
     mean_tem = 0
@@ -131,8 +110,30 @@ def compute_rgb_mean_std():
     b_std = math.sqrt(std_tem / sum_pixel_count)
     print("B_mean: {}  B_std: {}".format(b_mean, b_std))
 
+    # G
+    mean_tem = 0
+    for i in range(len(os.listdir(image_path))):
+        mean_tem += single_pixel_count[i] * g_mean_array[i]
+    g_mean = mean_tem / sum_pixel_count
+    std_tem = 0
+    for i in range(len(os.listdir(image_path))):
+        std_tem += single_pixel_count[i] * (g_std_array[i]**2 + (g_mean - g_mean_array[i]) ** 2)
+    g_std = math.sqrt(std_tem / sum_pixel_count)
+    print("G_mean: {}  G_std: {}".format(g_mean, g_std))
 
-def data_clan():
+    # R
+    mean_tem = 0
+    for i in range(len(os.listdir(image_path))):
+        mean_tem += single_pixel_count[i] * r_mean_array[i]
+    r_mean = mean_tem / sum_pixel_count
+    std_tem = 0
+    for i in range(len(os.listdir(image_path))):
+        std_tem += single_pixel_count[i] * (r_std_array[i]**2 + (r_mean - r_mean_array[i]) ** 2)
+    r_std = math.sqrt(std_tem / sum_pixel_count)
+    print("R_mean: {}  R_std: {}".format(r_mean, r_std))
+
+
+def data_clean():
     """ we put messy data into image and gt, perform label transform, with same name """
     data_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/clean"
     save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin"
@@ -168,12 +169,12 @@ def data_clan():
 def data_split():
     """ split data into train, valid and test, all has the form of
     image and gt. Image and gt has same name """
-    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin/image"
-    gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin/gt"
-    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented"
-    # image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/image"
-    # gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/data_aug/gt"
-    # save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/new"
+    # image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin/image"
+    # gt_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin/gt"
+    # save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented"
+    image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/image"
+    gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/gt"
+    save_path = "/home/xueruoyao/Documents/PythonProgram/dataset/new"
 
     split_ratio = (0.6, 0.2, 0.2)  # train, valid, test
     image_name_list = os.listdir(image_path)
@@ -317,9 +318,9 @@ def data_split_csv():
 
 if __name__ == "__main__":
     # data_clean()
-    # data_split()
+    data_split()
     # statistic_image_size()
-    compute_rgb_mean_std()
+    # compute_rgb_mean_std()
     # label_statistics()
     # find_damaged_label()
     # data_split_csv()

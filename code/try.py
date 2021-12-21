@@ -5,23 +5,25 @@ import shutil
 from torchvision import transforms, utils as vutils
 import numpy as np
 import torch
+import utils.preprocessing as prepro
 import torch.nn.functional as F
 from torch import nn
 from collections import namedtuple
 import time
-import numpy as np
 import argparse
 import datetime
 import cv2
+from tqdm import tqdm
 from utils import PNGTestloader
 from utils import PNGTrainloader, TIFFTrainloader, PlateauLRScheduler, LogSoftmaxCELoss
 from ruamel import yaml
 from torch.utils.tensorboard import SummaryWriter
+from typing import Tuple
 from models import UNet
 
 
-image_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/original/image"
-label_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semantic_segmentation/original/label"
+image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/image"
+gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/gt"
 
 # from utils import ComputerVisionTestLoader
 #
@@ -30,8 +32,8 @@ label_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semant
 
 # device = torch.device("cuda:0")
 # test_loader = PNGTestloader(image_path, chip_size=256, stride=128, n_class=3,
-#                             batch_size=11, device=device)
-# max_batch = np.ceil(len(test_loader) / 11)
+#                             batch_size=4, device=device)
+# max_batch = np.ceil(len(test_loader) / 1)
 # print(max_batch)
 # last_batch_flag = False
 # for i, (data, info) in enumerate(test_loader):
@@ -40,10 +42,10 @@ label_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semant
 #         last_batch_flag = True
 #     data = data.to(device)
 #     for whole_image, image_name in test_loader.stitcher(data, info, last_batch_flag):
-#         if i == max_batch -1:
-#             whole_image = whole_image.permute([1, 2, 0])
-#             whole_image = (whole_image.detach().cpu().numpy())
-#
+#         whole_image = whole_image.permute([1, 2, 0])
+#         whole_image = (whole_image.detach().cpu().numpy())
+#         cv2.imshow("whole image", np.uint8(whole_image))
+#         cv2.waitKey(0)
 
 
 
@@ -96,10 +98,10 @@ label_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/dataset/semant
 # image_path = "/home/xueruoyao/Documents/PythonProgram/MyFramework/code/save/prediction_saved/FCN8s"
 # print(len(os.listdir(image_path)))
 
-info_dict = {
-    "school": "2",
-    "list": ["1", 2, 3, 4]
-}
+# info_dict = {
+#     "school": "2",
+#     "list": ["1", 2, 3, 4]
+# }
 #
 # with open("./test.yml", "w") as f:
 #     yaml.dump(info_dict, f)
@@ -130,14 +132,14 @@ info_dict = {
 # logger.addHandler(file_handler)
 # logging.info("info hello")
 
-model = nn.Sequential(nn.Linear(3, 64),
-                      nn.Linear(64, 128))
-optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
-optimizer2 = torch.optim.SGD(model.parameters(), lr=0.2, momentum=0.9, weight_decay=1e-5)
-scheduler = PlateauLRScheduler(optimizer, patience=2, min_lr=1e-3, lr_factor=0.75,
-                               warmup_duration=20)
-scheduler2 = PlateauLRScheduler(optimizer2, patience=5, min_lr=1e-6, lr_factor=0.25,
-                               warmup_duration=20)
+# model = nn.Sequential(nn.Linear(3, 64),
+#                       nn.Linear(64, 128))
+# optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
+# optimizer2 = torch.optim.SGD(model.parameters(), lr=0.2, momentum=0.9, weight_decay=1e-5)
+# scheduler = PlateauLRScheduler(optimizer, patience=2, min_lr=1e-6, lr_factor=0.5,
+#                                warmup_duration=20)
+# scheduler2 = PlateauLRScheduler(optimizer2, patience=5, min_lr=1e-6, lr_factor=0.25,
+#                                warmup_duration=20)
 
 # # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 2)
 #
@@ -147,12 +149,12 @@ scheduler2 = PlateauLRScheduler(optimizer2, patience=5, min_lr=1e-6, lr_factor=0
 # print(scheduler.get_lr())
 
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
-
-scheduler2.load_state_dict(scheduler.state_dict())
+#
+# scheduler2.load_state_dict(scheduler.state_dict())
 
 # loss_ = torch.tensor([20], dtype=torch.float32).cuda()
-# for epoch in range(1, 100):
-#     if epoch == 8:
+# for epoch in range(1, 1000):
+#     if epoch % 8 == 0:
 #         loss_ /= 2
 #     scheduler.step(loss_, epoch)
 # print(scheduler.best_metric)
@@ -169,7 +171,7 @@ scheduler2.load_state_dict(scheduler.state_dict())
 # criterion2.load_state_dict(criterion.state_dict())
 # print(criterion2.state_dict())
 
-writer = SummaryWriter("./tensorboard_info/")
+# writer = SummaryWriter("./tensorboard_info/")
 
 # x = torch.tensor([5], dtype=torch.float32)
 # y = torch.tensor([2], dtype=torch.float32)
@@ -217,4 +219,50 @@ writer = SummaryWriter("./tensorboard_info/")
 #
 # a = torch.from_numpy(np.array(a)).float().cuda()
 # print(a)
+#
+# augmentation = prepro.ProcessingSequential([
+#     prepro.RandomCrop(chip_size=512),
+#     prepro.RandomRotate(random_choice=[0, 90, 180, 270]),
+#     prepro.RandomFlip(random_choice=[-1, 0, 1]),
+#     prepro.Normalize(mean=(73.4711, 97.6228, 104.4753), std=(31.2603, 32.3015, 39.8499)),
+#     prepro.ToTensor()
+# ])
+#
+# print(augmentation.list_of_repr())
 
+# output_string = augmentation.__class__.__name__ + "("
+# for key in augmentation.__dict__.keys():
+#     output_string += key + "=" + str(augmentation.__dict__[key]) + ", "
+#
+# output_string = output_string.strip(", ") + ")"
+# print(output_string)
+# with tqdm(total=len(os.listdir(image_path))) as pbar:
+#     for image_name in os.listdir(image_path):
+#         image = cv2.imread(os.path.join(image_path, image_name))
+#         gt = cv2.imread(os.path.join(gt_path, image_name))
+#         # cv2.imshow("image_before", image)
+#         # cv2.imshow("gt_before", np.uint8(gt * 255))
+#         image_after, gt_after = augmentation(image, gt)
+#         # cv2.imshow("image_after", image_after)
+#         # cv2.imshow("gt_after", np.uint8(gt_after * 255))
+#         # cv2.waitKey(0)
+#         pbar.update()
+
+
+#
+# random_mosaic = prepro.RandomMosaic(final_size=512, n_channel=3)
+# image_list = []
+# gt_list = []
+# for image_name in os.listdir(image_path):
+#     image = cv2.imread(os.path.join(image_path, image_name))
+#     gt = cv2.imread(os.path.join(gt_path, image_name))
+#     image_list.append(image)
+#     gt_list.append(gt[:, :, 0])
+#     print("OK")
+#     if len(image_list) == 4:
+#         image, gt = random_mosaic(image_list, gt_list)
+#         cv2.imshow("image", image)
+#         cv2.imshow("gt", np.uint8(gt * 255))
+#         cv2.waitKey(0)
+#         image_list.clear()
+#         gt_list.clear()

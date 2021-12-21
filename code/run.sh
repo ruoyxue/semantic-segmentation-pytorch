@@ -22,7 +22,9 @@ python train.py \
 --exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/UNet \
 --check_point_mode save \
 
-elif [ $mode -eq 1 ];
+fi
+
+if [ $mode -eq 1 ];
 then
 python test.py \
 --model fcn8s \
@@ -36,9 +38,3 @@ python test.py \
 
 fi
 exit 0
-
-
-# -m torch.utils.bottleneck 
-
-
-
