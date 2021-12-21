@@ -259,7 +259,7 @@ def data_split_csv():
     # csv files should be named after train.csv, valid.csv, test.csv
     csv_dir_path = "/data/xueruoyao/csv"
     origin_data_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/origin"
-    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/segmented"
+    save_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/1024_segmented"
 
     print("split data according to csv")
     if not os.path.exists(save_path):
@@ -318,10 +318,10 @@ def data_split_csv():
 
 if __name__ == "__main__":
     # data_clean()
-    data_split()
+    # data_split()
     # statistic_image_size()
     # compute_rgb_mean_std()
     # label_statistics()
     # find_damaged_label()
-    # data_split_csv()
+    data_split_csv()
     pass

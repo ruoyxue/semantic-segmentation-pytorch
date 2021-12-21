@@ -81,11 +81,11 @@ def trainer(train_args: argparse, logger):
     # criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.0862, 1.9138], dtype=torch.float32))
     criterion.to(train_args.device)
     evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
-    optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-5)
+    optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-6)
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
     #                                                  min_lr=1e-6, threshold=1e-3, verbose=True)
-    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.5, patience=2, min_lr=1e-6,
-                                   threshold=1e-2, warmup_duration=20)
+    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.5, patience=5, min_lr=1e-6,
+                                   threshold=1e-2, warmup_duration=50)
     if train_args.check_point_mode == "save":
         with open(os.path.join(train_args.exp_path, "config.yml"), "a") as f:
             yaml.dump({"optimizer": {"type": str(type(optimizer)), "state_dict": optimizer.state_dict()}}, f)
