@@ -38,7 +38,7 @@ def find_damaged_label():
             gt = cv2.imread(os.path.join(gt_path, gt_name))[:, :, 2]
             gt = torch.from_numpy(gt).float()
             loss = criterion(gt, gt)
-            if(torch.isnan(loss)):
+            if torch.isnan(loss):
                 print("nan: {}".format(gt_name))
             pbar.update()
 
@@ -63,81 +63,73 @@ def label_statistics():
             mask = cv2.imread(os.path.join(gt_path, gt_name))[:, :, 0]
             counts = label_statistics_help(mask, counts)
             pbar.update()
-    sum = 0
+    sum_count = 0
     for i in range(len(label)):
         print(f"{i}: {int(counts[i])}")
-        sum += int(counts[i])
+        sum_count += int(counts[i])
     print("percentage:")
     for i in range(len(label)):
-        print(f"{i}: {round(float(counts[i])/sum, 4)}")
+        print(f"{i}: {round(float(counts[i])/sum_count, 4)}")
 
 
 def compute_rgb_mean_std():
-    """ calculate mean and std of R, G, B channel"""
+    """ calculate mean and std of R, G, B channel """
     print("compute_rgb_mean_std")
-    image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
+    # image_path = "/data/xueruoyao/dataset/road_extraction/deepglobe/data_aug/image"
+    image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/segmented/train/image"
+    image_name_list = os.listdir(image_path)
+    image_count = len(image_name_list)
+    r_mean_array, r_std_array = np.zeros(image_count), np.zeros(image_count)
+    g_mean_array, g_std_array = np.zeros(image_count), np.zeros(image_count)
+    b_mean_array, b_std_array = np.zeros(image_count), np.zeros(image_count)
 
-    R_mean, R_std = [], []
-    G_mean, G_std = [], []
-    B_mean, B_std = [], []
-    size = []  # pixels of every image
-    sum_size = 0  # 记录所有图片总像素
+    single_pixel_count = np.zeros(image_count)  # pixel count of every image
+    sum_pixel_count = 0  # record sum of pixels of images
+
     with tqdm(total=len(os.listdir(image_path)), unit=" img") as pbar:
-        for image_name in os.listdir(image_path):
-            rgb_img = cv2.imread(os.path.join(image_path, image_name))
-            B, G, R = rgb_img[:, :, 0], rgb_img[:, :, 1], rgb_img[:, :, 2]
-            size.append(len(B))
-            sum_size = sum_size + len(B)
-            R_mean.append(np.mean(R))
-            R_std.append(np.std(R))
-            G_mean.append(np.mean(G))
-            G_std.append(np.std(G))
-            B_mean.append(np.mean(B))
-            B_std.append(np.std(B))
+        for i in range(image_count):
+            rgb_img = cv2.imread(os.path.join(image_path, image_name_list[i]))
+            b_mean_array[i] = np.mean(rgb_img[:, :, 0])
+            b_std_array[i] = np.std(rgb_img[:, :, 0])
+            g_mean_array[i] = np.mean(rgb_img[:, :, 1])
+            g_std_array[i] = np.std(rgb_img[:, :, 1])
+            r_mean_array[i] = np.mean(rgb_img[:, :, 2])
+            r_std_array[i] = np.std(rgb_img[:, :, 2])
+            single_pixel_count[i] = rgb_img.shape[0] * rgb_img.shape[1]
+            sum_pixel_count = sum_pixel_count + rgb_img.shape[0] * rgb_img.shape[1]
             pbar.update()
+    # R
+    mean_tem = 0
+    for i in range(len(os.listdir(image_path))):
+        mean_tem += single_pixel_count[i] * r_mean_array[i]
+    r_mean = mean_tem / sum_pixel_count
+    std_tem = 0
+    for i in range(len(os.listdir(image_path))):
+        std_tem += single_pixel_count[i] * (r_std_array[i]**2 + (r_mean - r_mean_array[i]) ** 2)
+    r_std = math.sqrt(std_tem / sum_pixel_count)
+    print("R_mean: {}  R_std: {}".format(r_mean, r_std))
 
-    num = len(os.listdir(image_path))
-    # R_mean
-    tem = 0
-    for i in range(num):
-        tem = tem + size[i] * R_mean[i]
-    R_mean_final = tem / sum_size
-    print("R_mean:", R_mean_final)
+    # G
+    mean_tem = 0
+    for i in range(len(os.listdir(image_path))):
+        mean_tem += single_pixel_count[i] * g_mean_array[i]
+    g_mean = mean_tem / sum_pixel_count
+    std_tem = 0
+    for i in range(len(os.listdir(image_path))):
+        std_tem += single_pixel_count[i] * (g_std_array[i]**2 + (g_mean - g_mean_array[i]) ** 2)
+    g_std = math.sqrt(std_tem / sum_pixel_count)
+    print("G_mean: {}  G_std: {}".format(g_mean, g_std))
 
-    # R_std
-    tem = 0
-    for i in range(num):
-        tem = tem + size[i] * (math.pow(R_std[i], 2) + math.pow((R_mean_final - R_mean[i]), 2))
-    R_std_final = math.sqrt(tem / sum_size)
-    print("R_std:", R_std_final)
-
-    # G_mean
-    tem = 0
-    for i in range(num):
-        tem = tem + size[i] * G_mean[i]
-    G_mean_final = tem / sum_size
-    print("G_mean:", G_mean_final)
-
-    # G_std
-    tem = 0
-    for i in range(num):
-        tem = tem + size[i] * (math.pow(G_std[i], 2) + math.pow((G_mean_final - G_mean[i]), 2))
-    G_std_final = math.sqrt(tem / sum_size)
-    print("G_std:", G_std_final)
-
-    # B_mean
-    tem = 0
-    for i in range(num):
-        tem = tem + size[i] * B_mean[i]
-    B_mean_final = tem / sum_size
-    print("B_mean:", B_mean_final)
-
-    # B_std
-    tem = 0
-    for i in range(num):
-        tem = tem + size[i] * (math.pow(B_std[i], 2) + math.pow((B_mean_final - B_mean[i]), 2))
-    B_std_final = math.sqrt(tem / sum_size)
-    print("B_std:", B_std_final)
+    # B
+    mean_tem = 0
+    for i in range(len(os.listdir(image_path))):
+        mean_tem += single_pixel_count[i] * b_mean_array[i]
+    b_mean = mean_tem / sum_pixel_count
+    std_tem = 0
+    for i in range(len(os.listdir(image_path))):
+        std_tem += single_pixel_count[i] * (b_std_array[i] ** 2 + (b_mean - b_mean_array[i]) ** 2)
+    b_std = math.sqrt(std_tem / sum_pixel_count)
+    print("B_mean: {}  B_std: {}".format(b_mean, b_std))
 
 
 def data_clan():
@@ -327,8 +319,8 @@ if __name__ == "__main__":
     # data_clean()
     # data_split()
     # statistic_image_size()
-    # compute_rgb_mean_std()
-    label_statistics()
+    compute_rgb_mean_std()
+    # label_statistics()
     # find_damaged_label()
     # data_split_csv()
     pass

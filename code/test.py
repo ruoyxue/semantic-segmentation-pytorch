@@ -66,8 +66,9 @@ def tester(test_args: argparse, logger):
 if __name__ == "__main__":
     Args = TestArgs()
     logger = get_logger(os.path.join(Args.exp_path, "log_test.txt"))
+    logger.info("--------------Test Process----------------\nArgs:")
     for key in Args.origin.keys():
-        logger.info(f"{key}: {Args.origin[key]}")
+        logger.info(f"  {key}: {Args.origin[key]}")
     logger.info("")
     tester(Args, logger)
 

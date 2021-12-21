@@ -111,9 +111,10 @@ class PlateauLRScheduler:
         if str(type(self.optimizer)) != state_dict["optimizer_type"]:
             raise TypeError("Scheduler load, input dict has different optimizer_type({}) with former "
                             "instantiation({})".format(state_dict["optimizer_type"], str(type(self.optimizer))))
-        assert self.initial_lr == state_dict["initial_lr"],\
-            "Scheduler load, optimizer has different initial_lr({}) with that in input dict({})"\
-            .format(self.initial_lr, state_dict["initial_lr"])
+        if self.initial_lr != state_dict["initial_lr"]:
+            logging.warning("Warning: Scheduler load, optimizer has different "
+                            "initial_lr({}) with that in input dict({})".
+                            format(self.initial_lr, state_dict["initial_lr"]))
         self.__dict__.update(state_dict)
 
     def get_lr(self):

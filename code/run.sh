@@ -7,7 +7,6 @@ mode=0;
 
 if [ $mode -eq 0 ];
 then
-echo "------------Training Process------------" 
 python train.py \
 --model unet \
 --epochs 300 \
@@ -25,7 +24,6 @@ python train.py \
 
 elif [ $mode -eq 1 ];
 then
-echo "------------Testing Process-------------"
 python test.py \
 --model fcn8s \
 --n_class 2 \

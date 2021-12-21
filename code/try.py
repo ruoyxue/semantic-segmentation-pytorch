@@ -146,7 +146,9 @@ scheduler2 = PlateauLRScheduler(optimizer2, patience=5, min_lr=1e-6, lr_factor=0
 
 # print(scheduler.get_lr())
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG, format="%(message)s")
+
+scheduler2.load_state_dict(scheduler.state_dict())
 
 # loss_ = torch.tensor([20], dtype=torch.float32).cuda()
 # for epoch in range(1, 100):
@@ -216,8 +218,3 @@ writer = SummaryWriter("./tensorboard_info/")
 # a = torch.from_numpy(np.array(a)).float().cuda()
 # print(a)
 
-
-a = torch.tensor([2]).cuda()
-b = a
-a = torch.tensor([5])
-print(b)

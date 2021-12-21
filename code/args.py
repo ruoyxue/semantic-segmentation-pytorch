@@ -15,7 +15,7 @@ def get_logger(save_path):
     terminal_handler.setLevel(logging.DEBUG)
     file_handler = logging.FileHandler(filename=save_path)
     file_handler.setFormatter(logging.Formatter("%(message)s"))
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(logging.DEBUG)
     logger.addHandler(terminal_handler)
     logger.addHandler(file_handler)
     return logger
