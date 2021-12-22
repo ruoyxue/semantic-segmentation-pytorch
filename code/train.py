@@ -85,7 +85,7 @@ def trainer(train_args: argparse, logger):
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
     #                                                  min_lr=1e-6, threshold=1e-3, verbose=True)
     scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.5, patience=5, min_lr=1e-6,
-                                   threshold=1e-2, warmup_duration=50)
+                                   threshold=5e-3, warmup_duration=50)
     if train_args.check_point_mode == "save":
         with open(os.path.join(train_args.exp_path, "config.yml"), "a") as f:
             yaml.dump({"optimizer": {"type": str(type(optimizer)), "state_dict": optimizer.state_dict()}}, f)
@@ -163,7 +163,7 @@ def trainer(train_args: argparse, logger):
         ))
         scheduler.step(loss_, epoch)
         logger.info("")
-        if epoch % 1 == 0:
+        if epoch % 5 == 0:
             # validation, save model has best valid miou
             with torch.no_grad():
                 valid_metrics = valider(train_args, logger)
