@@ -51,7 +51,7 @@ class ComputerVisionTestLoader:
         self.preprocessing = preprocessing
         self.chip_information = []
         self.preprocessing = prepro.ProcessingSequential([
-            # prepro.Normalize(mean=(73.4711, 97.6228, 104.4753), std=(31.2603, 32.3015, 39.8499)),
+            prepro.Normalize(mean=(73.4711, 97.6228, 104.4753), std=(31.2603, 32.3015, 39.8499)),
             prepro.ToTensor()
         ])
         self.prepare_chip_information()
