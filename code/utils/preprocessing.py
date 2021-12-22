@@ -136,6 +136,8 @@ class RandomCrop:
 
     def __call__(self, image: np.array, gt: np.array):
         height, width = image.shape[:2]
+        if self.chip_height == height and self.chip_width == width:
+            return image, gt
         x = np.random.randint(0, height - self.chip_height)
         y = np.random.randint(0, width - self.chip_width)
         return image[x:x + self.chip_height, y:y + self.chip_width], \

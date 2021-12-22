@@ -159,7 +159,7 @@ class TrainArgs(Args):
         tensorboard_save_path = os.path.join(self.args.exp_path, "tensorboard_saved")
         if not os.path.exists(tensorboard_save_path):
             os.makedirs(tensorboard_save_path)
-        if len(os.listdir(tensorboard_save_path)) != 0:
+        if len(os.listdir(tensorboard_save_path)) != 0 and self.args.check_point_mode != "save":
             raise RuntimeError(f"save tensorboard directory ({tensorboard_save_path}) is not empty")
 
         return self.args

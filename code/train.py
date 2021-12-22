@@ -189,11 +189,14 @@ def trainer(train_args: argparse, logger):
                         }, save_checkpoint_path)
                         logger.info(f"--------------- epoch {epoch} model, checkpoint "
                                     f"saved successfully ---------------")
-        logger.info("")
+            logger.info("")
+            writer_metrics.add_scalars("", {
+                "valid_iou": valid_metrics["iou"]
+            }, epoch)
+
         writer_metrics.add_scalars("", {
             "train_loss": round(loss_.item(), 5),
             "train_iou": train_metrics["iou"],
-            "valid_iou": valid_metrics["iou"]
         }, epoch)
         writer_metrics.flush()
         evaluator.clear()
@@ -212,7 +215,7 @@ if __name__ == "__main__":
             yaml.dump({"args": Args.origin}, f, Dumper=yaml.RoundTripDumper)
             f.write("\n")
     elif Args.check_point_mode == "load":
-        logger.info("-------------Retrain Process--------------\n"
+        logger.info("\n-------------Retrain Process--------------\n"
                     "------------Load Checkpoint, Restarting----------\nArgs:")
     for key in Args.origin.keys():
         logger.info(f"  {key}: {Args.origin[key]}")

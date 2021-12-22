@@ -17,10 +17,10 @@ python train.py \
 --batch_size 2 \
 --lr 0.001 \
 --device cuda:0 \
---train_data_path /home/xueruoyao/Documents/PythonProgram/dataset/new/train \
---valid_data_path /home/xueruoyao/Documents/PythonProgram/dataset/new/valid \
+--train_data_path /home/xueruoyao/Documents/PythonProgram/dataset/segmented/train \
+--valid_data_path /home/xueruoyao/Documents/PythonProgram/dataset/segmented/valid \
 --exp_path /home/xueruoyao/Documents/PythonProgram/exp/UNet \
---check_point_mode save \
+--check_point_mode load \
 
 elif [ $mode -eq 1 ];
 then
