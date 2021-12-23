@@ -64,7 +64,7 @@ def valider(train_args: argparse, logger):
     train_args.model.train()
     return evaluator.get_metrics()
 
-# here's the diff
+# here's the di
 
 
 def trainer(train_args: argparse, logger):
