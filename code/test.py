@@ -3,8 +3,6 @@ function for testing
 
 TODO: add torch.jit.script
 """
-print("test2")
-print("train main")
 
 import logging
 import datetime
