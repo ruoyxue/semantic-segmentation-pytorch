@@ -16,7 +16,7 @@ from utils.evaluator import SegmentationEvaluator
 from torchvision import datasets, transforms
 from args import TestArgs, get_logger
 import cv2
-
+# test
 
 @torch.no_grad()
 def tester(test_args: argparse, logger):
