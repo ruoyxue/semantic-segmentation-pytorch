@@ -5,6 +5,7 @@ TODO: add torch.jit.script
 """
 print("test2")
 print("test2")
+print("test2")
 
 import logging
 import datetime
