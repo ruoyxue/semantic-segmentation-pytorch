@@ -3,9 +3,10 @@ function for testing
 
 TODO: add torch.jit.script
 """
-# erwerfew
-# dewf ew
-# test 2
+print("train main")
+print("train main")
+print("train main")
+print("train main")
 
 import logging
 import datetime
