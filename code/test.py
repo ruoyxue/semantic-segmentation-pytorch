@@ -3,9 +3,7 @@ function for testing
 
 TODO: add torch.jit.script
 """
-print("train main")
-print("train main")
-print("train main")
+print("test2")
 print("train main")
 
 import logging
