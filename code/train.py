@@ -64,8 +64,6 @@ def valider(train_args: argparse, logger):
     train_args.model.train()
     return evaluator.get_metrics()
 
-# there is your differencefwefwefwf
-
 
 def trainer(train_args: argparse, logger):
     save_model_path = os.path.join(train_args.exp_path, "model_saved")
