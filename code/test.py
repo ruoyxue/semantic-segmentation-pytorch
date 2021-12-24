@@ -3,7 +3,7 @@ function for testing
 
 TODO: add torch.jit.script
 """
-#there is the difference
+
 
 import logging
 import datetime
