@@ -3,5 +3,7 @@ code/__pycache__
 code/models/__pycache__
 code/models/block/__pycache__
 code/utils/__pycache__
+.idea/workspace.xml
+.idea/framework.iml
 .idea
 .gitignore
