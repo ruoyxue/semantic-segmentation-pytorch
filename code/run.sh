@@ -7,7 +7,7 @@ mode=0;
 
 if [ $mode -eq 0 ];
 then
-python train.py \
+python trainer.py \
 --model unet \
 --epochs 600 \
 --random_seed 23423 \
@@ -26,7 +26,7 @@ fi
 
 if [ $mode -eq 1 ];
 then
-python test.py \
+python tester.py \
 --model fcn8s \
 --n_class 2 \
 --chip_size 512 \
