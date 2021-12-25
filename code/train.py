@@ -81,11 +81,13 @@ def trainer(train_args: argparse, logger):
     # criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.0862, 1.9138], dtype=torch.float32))
     criterion.to(train_args.device)
     evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
-    optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-6)
+    # optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-4)
+    optimizer = torch.optim.Adam(train_args.model.parameters(), lr=train_args.lr, betas=(0.9, 0.999),
+                                 eps=1e-08, weight_decay=1e-4, amsgrad=False)
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
     #                                                  min_lr=1e-6, threshold=1e-3, verbose=True)
-    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.5, patience=5, min_lr=1e-6,
-                                   threshold=5e-3, warmup_duration=50)
+    scheduler = PlateauLRScheduler(optimizer, mode="min", lr_factor=0.5, patience=10, min_lr=1e-6,
+                                   threshold=5e-4, warmup_duration=30)
     if train_args.check_point_mode == "save":
         with open(os.path.join(train_args.exp_path, "config.yml"), "a") as f:
             yaml.dump({"optimizer": {"type": str(type(optimizer)), "state_dict": optimizer.state_dict()}}, f)
@@ -110,12 +112,12 @@ def trainer(train_args: argparse, logger):
         criterion.to(train_args.device)
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-        checkpoint["scheduler_state_dict"]["patience"] = 10
-        checkpoint["scheduler_state_dict"]["min_lr"] = 1e-6
-        checkpoint["scheduler_state_dict"]["threshold"] = 1e-3
-        checkpoint["scheduler_state_dict"]["warmup_duration"] = 50
-        logging.info("----------- revise scheduler patience=10, min_lr=1e-6, "
-                     "threshold=1e-3, warmup_duration=50 -----------")
+        # checkpoint["scheduler_state_dict"]["patience"] = 10
+        # checkpoint["scheduler_state_dict"]["min_lr"] = 1e-6
+        # checkpoint["scheduler_state_dict"]["threshold"] = 1e-3
+        # checkpoint["scheduler_state_dict"]["warmup_duration"] = 50
+        # logging.info("----------- revise scheduler patience=10, min_lr=1e-6, "
+        #              "threshold=1e-3, warmup_duration=50 -----------")
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         best_valid_metric = checkpoint["best_valid_metric"]
         best_valid_epoch = checkpoint["best_valid_epoch"]
