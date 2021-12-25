@@ -76,8 +76,7 @@ def trainer(train_args: argparse, logger):
                                       gt_path=os.path.join(train_args.train_data_path, "gt"),
                                       batch_size=train_args.batch_size, drop_last=True, shuffle=True,
                                       chip_size=train_args.chip_size)
-    criterion = LogSoftmaxCELoss(n_class=train_args.n_class, weight=torch.tensor([0.0431, 0.9569]),
-                                 smoothing=0.002)
+    criterion = LogSoftmaxCELoss(n_class=train_args.n_class, weight=torch.tensor([0.0431, 0.9569]))
     # criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.0862, 1.9138], dtype=torch.float32))
     criterion.to(train_args.device)
     evaluator = SegmentationEvaluator(true_label=torch.arange(train_args.n_class))
