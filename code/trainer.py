@@ -1,5 +1,17 @@
 """
 class for training
+
+TODO: add torch.jit.script
+TODO: add tensorboard visualisation
+TODO: remove ifs to accelerate GPU computations
+TODO: add apex.amp
+TODO: replace python code with C++, python serves as glue
+TODO: add data parallel
+TODO: add distributive training
+TODO: add gradient accumulation to upgrade gradients after a few epochs
+      (use small batchsize to simulate larger one)
+TODO: add pretrained parameters to models
+TODO: replace static data augmentation with dynamic ones, and pack functions in .py file into a class
 """
 
 import datetime
