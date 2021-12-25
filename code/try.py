@@ -148,7 +148,7 @@ gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/gt"
 
 # print(scheduler.get_lr())
 
-logging.basicConfig(level=logging.DEBUG, format="%(message)s")
+# logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 #
 # scheduler2.load_state_dict(scheduler.state_dict())
 

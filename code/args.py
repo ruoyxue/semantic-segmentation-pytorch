@@ -8,8 +8,8 @@ from models import *
 import copy
 
 
-def get_logger(save_path):
-    """ get logger which output in both terminal and save in file """
+def set_logger(save_path):
+    """ set logger which output in both terminal and save in file """
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     terminal_handler = logging.StreamHandler()
@@ -20,7 +20,6 @@ def get_logger(save_path):
     file_handler.setLevel(logging.DEBUG)
     logger.addHandler(terminal_handler)
     logger.addHandler(file_handler)
-    return logger
 
 
 class Args:
