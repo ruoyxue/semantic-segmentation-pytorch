@@ -20,7 +20,7 @@ python trainer.py \
 --train_data_path /data/xueruoyao/dataset/road_extraction/deepglobe/1024_segmented/train \
 --valid_data_path /data/xueruoyao/dataset/road_extraction/deepglobe/1024_segmented/valid \
 --exp_path /data/xueruoyao/experiment/road_extraction/deepglobe/UNet \
---check_point_mode save \
+--check_point_mode load \
 
 fi
 

@@ -63,7 +63,7 @@ class Trainer:
                                           betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4)
         # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
         #                                                  min_lr=1e-6, threshold=1e-3, verbose=True)
-        self.scheduler = PlateauLRScheduler(self.optimizer, mode="min", lr_factor=0.5, patience=10,
+        self.scheduler = PlateauLRScheduler(self.optimizer, mode="min", lr_factor=0.5, patience=25,
                                             min_lr=1e-6, threshold=5e-4, warmup_duration=30)
 
     def load_checkpoints(self):
@@ -75,12 +75,12 @@ class Trainer:
         self.criterion.to(self.train_args.device)
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-        # checkpoint["scheduler_state_dict"]["patience"] = 10
+        checkpoint["scheduler_state_dict"]["patience"] = 30
+        checkpoint["scheduler_state_dict"]["current_lr"] = 0.001
         # checkpoint["scheduler_state_dict"]["min_lr"] = 1e-6
         # checkpoint["scheduler_state_dict"]["threshold"] = 1e-3
         # checkpoint["scheduler_state_dict"]["warmup_duration"] = 50
-        # logging.info("----------- revise scheduler patience=10, min_lr=1e-6, "
-        #              "threshold=1e-3, warmup_duration=50 -----------")
+        logging.info("----------- revise scheduler patience=30,current_lr=0.001 -----------")
         self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         self.best_valid_metric = checkpoint["best_valid_metric"]
         self.best_valid_epoch = checkpoint["best_valid_epoch"]
