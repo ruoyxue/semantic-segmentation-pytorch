@@ -214,7 +214,6 @@ def data_split():
             shutil.copy2(os.path.join(gt_path, image_name),
                          os.path.join(save_path, "train", "gt", image_name))
             pbar.update()
-
         # valid data
         for image_name in image_name_list[tem_train:tem_valid]:
             shutil.copy2(os.path.join(image_path, image_name),
