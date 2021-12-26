@@ -41,6 +41,7 @@ class Trainer:
         self.best_valid_metric, self.best_valid_epoch = 0, 1  # record best valid info
         self.trainloader, self.criterion, self.evaluator, self.optimizer, self.scheduler \
             = None, None, None, None, None
+        self.save_interval = 5  # intervals between two validations
         self.init_elements()
         self.init_checkpoint_mode()
         self.train()
@@ -89,6 +90,8 @@ class Trainer:
         """ init in terms of checkpoint mode; Save code and config for 'save', while load checkpoints for 'load' """
         if self.train_args.check_point_mode == "save":  # save code and config.yml
             logging.info("--------------Train Process----------------\nArgs:")
+            for key in self.train_args.origin.keys():
+                logging.info(f"  {key}: {self.train_args.origin[key]}")
             shutil.copytree(os.getcwd(), os.path.join(self.train_args.exp_path, "code"))
             self.save_config()
         elif self.train_args.check_point_mode == "load":  # load checkpoints
@@ -132,7 +135,7 @@ class Trainer:
             if (epoch - 1) % 5 == 0:
                 logging.info(datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]"))
             loss, train_metrics = self.single_epoch_train(epoch, batch_sum)
-            if epoch % 5 == 0:
+            if epoch % self.save_interval == 0:
                 with torch.no_grad():
                     valid_metrics = self.validation()
                     if valid_metrics["iou"] > self.best_valid_metric:
