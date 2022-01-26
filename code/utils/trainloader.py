@@ -14,7 +14,7 @@ from typing import List, Callable, Optional, Tuple
 import rasterio
 import torch.nn as nn
 from torchvision import transforms
-import utils.preprocessing as prepro
+import preprocessing as prepro
 
 
 class ComputerVisionTrainLoader:
