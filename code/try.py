@@ -266,3 +266,8 @@ gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/gt"
 #         cv2.waitKey(0)
 #         image_list.clear()
 #         gt_list.clear()
+
+resnet18 = torch.load("/home/xueruoyao/Documents/PythonProgram/resnet18-5c106cde.pth")
+
+for key in resnet18.keys():
+    print(key, "\n")
