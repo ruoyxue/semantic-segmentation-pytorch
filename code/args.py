@@ -81,7 +81,7 @@ class TrainArgs(Args):
 
     def analyse_args(self):
         # model
-        valid_model = ["unet", "mlp", "fcn32s", "fcn16s", "fcn8s"]
+        valid_model = ["unet", "mlp", "fcn32s", "fcn16s", "fcn8s", "dlinknet34", "dlinknet50", "dlinknet101"]
         if self.args.model not in valid_model:
             raise AssertionError(f"Invalid args['model']: expect model in {str(valid_model)}, "
                                  f"got {repr(self.args.model)}")
@@ -96,6 +96,13 @@ class TrainArgs(Args):
                 self.args.model = FCN16s(self.args.n_class)
             if self.args.model == "fcn8s":
                 self.args.model = FCN8s(self.args.n_class)
+            if self.args.model == "dlinknet34":
+                self.args.model = DLinkNet34(self.args.n_class, pretrained=True)
+            if self.args.model == "dlinknet50":
+                self.args.model = DLinkNet50(self.args.n_class, pretrained=True)
+            if self.args.model == "dlinknet101":
+                self.args.model = DLinkNet101(self.args.n_class, pretrained=True)
+
 
         # device
         if self.args.device == "cpu":
@@ -184,13 +191,13 @@ class TestArgs(Args):
 
     def analyse_args(self):
         # model
-        valid_model = ["unet", "mlp", "fcn32s", "fcn16s", "fcn8s"]
+        valid_model = ["unet", "mlp", "fcn32s", "fcn16s", "fcn8s", "dlinknet34", "dlinknet50", "dlinknet101"]
         if self.args.model not in valid_model:
-            raise AssertionError("Invalid args['model'] : " + "expect model in " +
-                                 str(valid_model) + ", got '" + repr(self.args.model) + "'")
+            raise AssertionError(f"Invalid args['model']: expect model in {str(valid_model)}, "
+                                 f"got {repr(self.args.model)}")
         else:
             if self.args.model == "unet":
-                self.args.model = UNet(n_channel=3, n_class=self.args.n_class)
+                self.args.model = UNet(n_class=self.args.n_class, n_channel=3)
             if self.args.model == "mlp":
                 self.args.model = MLP()
             if self.args.model == "fcn32s":
@@ -199,6 +206,12 @@ class TestArgs(Args):
                 self.args.model = FCN16s(self.args.n_class)
             if self.args.model == "fcn8s":
                 self.args.model = FCN8s(self.args.n_class)
+            if self.args.model == "dlinknet34":
+                self.args.model = DLinkNet34(self.args.n_class, pretrained=True)
+            if self.args.model == "dlinknet50":
+                self.args.model = DLinkNet50(self.args.n_class, pretrained=True)
+            if self.args.model == "dlinknet101":
+                self.args.model = DLinkNet101(self.args.n_class, pretrained=True)
         # device
         if torch.cuda.is_available():
             self.args.device = torch.device(self.args.device)
