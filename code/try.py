@@ -267,7 +267,5 @@ gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/gt"
 #         image_list.clear()
 #         gt_list.clear()
 
-resnet18 = torch.load("/home/xueruoyao/Documents/PythonProgram/resnet18-5c106cde.pth")
-
-for key in resnet18.keys():
-    print(key, "\n")
+test = "hello, kitty"
+print(test.find("hello"))

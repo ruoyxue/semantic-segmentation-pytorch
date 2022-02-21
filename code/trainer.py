@@ -127,8 +127,13 @@ class Trainer:
             tem.to(self.train_args.device)
             )
         writer_model.close()
-        self.train_args.model.train()
 
+        num_params = 0
+        for param in self.train_args.model.parameters():
+            num_params += param.numel()
+        logging.info("model params: {} M".format(num_params / 1e6))
+
+        self.train_args.model.train()
         writer_metrics = SummaryWriter(os.path.join(self.save_tensorboard_path, "metrics"))
         batch_sum = int(len(self.trainloader) / self.train_args.batch_size)
         for epoch in range(self.start_epoch, self.train_args.epochs + 1):
