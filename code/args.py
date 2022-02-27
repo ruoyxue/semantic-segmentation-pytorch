@@ -81,28 +81,32 @@ class TrainArgs(Args):
 
     def analyse_args(self):
         # model
-        valid_model = ["unet", "mlp", "fcn32s", "fcn16s", "fcn8s", "dlinknet34", "dlinknet50", "dlinknet101"]
+        valid_model = ["unet", "mlp", "fcn32s", "fcn16s", "fcn8s", "dlinknet34", "dlinknet50", "dlinknet101",
+                       "seghrnet_DA", "seghrnet"]
         if self.args.model not in valid_model:
             raise AssertionError(f"Invalid args['model']: expect model in {str(valid_model)}, "
                                  f"got {repr(self.args.model)}")
         else:
             if self.args.model == "unet":
                 self.args.model = UNet(n_class=self.args.n_class, n_channel=3)
-            if self.args.model == "mlp":
+            elif self.args.model == "mlp":
                 self.args.model = MLP()
-            if self.args.model == "fcn32s":
+            elif self.args.model == "fcn32s":
                 self.args.model = FCN32s(self.args.n_class)
-            if self.args.model == "fcn16s":
+            elif self.args.model == "fcn16s":
                 self.args.model = FCN16s(self.args.n_class)
-            if self.args.model == "fcn8s":
+            elif self.args.model == "fcn8s":
                 self.args.model = FCN8s(self.args.n_class)
-            if self.args.model == "dlinknet34":
+            elif self.args.model == "dlinknet34":
                 self.args.model = DLinkNet34(self.args.n_class, pretrained=True)
-            if self.args.model == "dlinknet50":
+            elif self.args.model == "dlinknet50":
                 self.args.model = DLinkNet50(self.args.n_class, pretrained=True)
-            if self.args.model == "dlinknet101":
+            elif self.args.model == "dlinknet101":
                 self.args.model = DLinkNet101(self.args.n_class, pretrained=True)
-
+            elif self.args.model == "seghrnet_DA":
+                self.args.model = SegHRNet_DA(in_ch=3, n_classes=self.args.n_class, backbone="hr-w32", pretrained=True)
+            elif self.args.model == "seghrnet":
+                self.args.model = SegHRNet(in_ch=3, n_classes=self.args.n_class, backbone="hr-w32", pretrained=True)
 
         # device
         if self.args.device == "cpu":
@@ -191,27 +195,33 @@ class TestArgs(Args):
 
     def analyse_args(self):
         # model
-        valid_model = ["unet", "mlp", "fcn32s", "fcn16s", "fcn8s", "dlinknet34", "dlinknet50", "dlinknet101"]
+        valid_model = ["unet", "mlp", "fcn32s", "fcn16s", "fcn8s", "dlinknet34", "dlinknet50", "dlinknet101",
+                       "seghrnet_DA", "seghrnet"]
         if self.args.model not in valid_model:
             raise AssertionError(f"Invalid args['model']: expect model in {str(valid_model)}, "
                                  f"got {repr(self.args.model)}")
         else:
             if self.args.model == "unet":
                 self.args.model = UNet(n_class=self.args.n_class, n_channel=3)
-            if self.args.model == "mlp":
+            elif self.args.model == "mlp":
                 self.args.model = MLP()
-            if self.args.model == "fcn32s":
+            elif self.args.model == "fcn32s":
                 self.args.model = FCN32s(self.args.n_class)
-            if self.args.model == "fcn16s":
+            elif self.args.model == "fcn16s":
                 self.args.model = FCN16s(self.args.n_class)
-            if self.args.model == "fcn8s":
+            elif self.args.model == "fcn8s":
                 self.args.model = FCN8s(self.args.n_class)
-            if self.args.model == "dlinknet34":
+            elif self.args.model == "dlinknet34":
                 self.args.model = DLinkNet34(self.args.n_class, pretrained=True)
-            if self.args.model == "dlinknet50":
+            elif self.args.model == "dlinknet50":
                 self.args.model = DLinkNet50(self.args.n_class, pretrained=True)
-            if self.args.model == "dlinknet101":
+            elif self.args.model == "dlinknet101":
                 self.args.model = DLinkNet101(self.args.n_class, pretrained=True)
+            elif self.args.model == "seghrnet_DA":
+                self.args.model = SegHRNet_DA(in_ch=3, n_classes=self.args.n_class, backbone="hr-w32", pretrained=True)
+            elif self.args.model == "seghrnet":
+                self.args.model = SegHRNet(in_ch=3, n_classes=self.args.n_class, backbone="hr-w32", pretrained=True)
+
         # device
         if torch.cuda.is_available():
             self.args.device = torch.device(self.args.device)

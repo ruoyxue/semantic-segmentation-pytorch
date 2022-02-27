@@ -14,7 +14,7 @@ from typing import List, Callable, Optional, Tuple
 import rasterio
 import torch.nn as nn
 from torchvision import transforms
-import preprocessing as prepro
+import utils.preprocessing as prepro
 
 
 class ComputerVisionTrainLoader:
@@ -39,6 +39,7 @@ class ComputerVisionTrainLoader:
         self.shuffle = shuffle
         self.image_path_list = []
         self.gt_path_list = []
+        print("\n\n\n\n", __package__, "\n\n\n")
         self.preprocessing = prepro.ProcessingSequential([
             prepro.RandomCrop(chip_size=chip_size),
             prepro.RandomRotate(random_choice=[0, 90, 180, 270]),

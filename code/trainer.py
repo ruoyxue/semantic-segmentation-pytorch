@@ -24,7 +24,8 @@ import torch
 from torch import optim, nn
 import argparse
 from utils import PNGTrainloader, PNGTestloader, \
-    SegmentationEvaluator, LogSoftmaxCELoss, PlateauLRScheduler
+    SegmentationEvaluator, PlateauLRScheduler
+from utils.loss import LogSoftmaxCELoss, SigmoidDiceLoss, ComposedLoss
 from ruamel import yaml
 import shutil
 from torch.utils.tensorboard import SummaryWriter
@@ -41,7 +42,7 @@ class Trainer:
         self.best_valid_metric, self.best_valid_epoch = 0, 1  # record best valid info
         self.trainloader, self.criterion, self.evaluator, self.optimizer, self.scheduler \
             = None, None, None, None, None
-        self.save_interval = 5  # intervals between two validations
+        self.save_interval = 1  # intervals between two validations
         self.init_elements()
         self.init_checkpoint_mode()
         self.train()
@@ -54,17 +55,19 @@ class Trainer:
                                           gt_path=os.path.join(self.train_args.train_data_path, "gt"),
                                           batch_size=self.train_args.batch_size, drop_last=True, shuffle=True,
                                           chip_size=self.train_args.chip_size)
-        # criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.0862, 1.9138], dtype=torch.float32))
-        self.criterion = LogSoftmaxCELoss(n_class=self.train_args.n_class, weight=torch.tensor([0.0431, 0.9569]))
+        #         # criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.0862, 1.9138], dtype=torch.float32))
+        # self.criterion = LogSoftmaxCELoss(n_class=self.train_args.n_class, weight=torch.tensor([0.0431, 0.9569]))
+        self.criterion = ComposedLoss(n_class=self.train_args.n_class, weight=torch.tensor([0.0431, 0.9569]), ignore_index=0,
+                                      smoothing=0.0001)
         self.criterion.to(self.train_args.device)
         self.evaluator = SegmentationEvaluator(true_label=torch.arange(self.train_args.n_class))
         # optimizer = optim.SGD(train_args.model.parameters(), lr=train_args.lr, momentum=0.9, weight_decay=1e-4)
         self.optimizer = torch.optim.Adam(self.train_args.model.parameters(), lr=self.train_args.lr,
-                                          betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4)
+                                          betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
         # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.2, patience=5,
         #                                                  min_lr=1e-6, threshold=1e-3, verbose=True)
-        self.scheduler = PlateauLRScheduler(self.optimizer, mode="min", lr_factor=0.5, patience=20,
-                                            min_lr=1e-6, threshold=5e-4, warmup_duration=30)
+        self.scheduler = PlateauLRScheduler(self.optimizer, mode="min", lr_factor=0.5, patience=8,
+                                            min_lr=1e-6, threshold=5e-4, warmup_duration=10)
 
     def load_checkpoints(self):
         """ load checkpoints """
@@ -75,12 +78,12 @@ class Trainer:
         self.criterion.to(self.train_args.device)
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-        checkpoint["scheduler_state_dict"]["patience"] = 20
-        checkpoint["scheduler_state_dict"]["current_lr"] = 0.001
+        # checkpoint["scheduler_state_dict"]["patience"] = 20
+        # checkpoint["scheduler_state_dict"]["current_lr"] = 0.001
         # checkpoint["scheduler_state_dict"]["min_lr"] = 1e-6
         # checkpoint["scheduler_state_dict"]["threshold"] = 1e-3
         # checkpoint["scheduler_state_dict"]["warmup_duration"] = 50
-        logging.info("----------- revise scheduler patience=20,current_lr=0.001 -----------")
+        # logging.info("----------- revise scheduler patience=20,current_lr=0.001 -----------")
         self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         self.best_valid_metric = checkpoint["best_valid_metric"]
         self.best_valid_epoch = checkpoint["best_valid_epoch"]
@@ -127,8 +130,13 @@ class Trainer:
             tem.to(self.train_args.device)
             )
         writer_model.close()
-        self.train_args.model.train()
 
+        num_params = 0
+        for param in self.train_args.model.parameters():
+            num_params += param.numel()
+        logging.info("model params: {} M".format(round(num_params / 1e6, 2)))
+
+        self.train_args.model.train()
         writer_metrics = SummaryWriter(os.path.join(self.save_tensorboard_path, "metrics"))
         batch_sum = int(len(self.trainloader) / self.train_args.batch_size)
         for epoch in range(self.start_epoch, self.train_args.epochs + 1):
@@ -167,6 +175,8 @@ class Trainer:
                 self.optimizer.zero_grad()
                 # predictions (batch_size, n_class, height, width)
                 predictions = self.train_args.model(images)
+                # print("preds: ", predictions.shape)
+                # print("gts: ", gts.shape)
                 loss = self.criterion(predictions, gts)
                 loss.backward()
                 self.optimizer.step()

@@ -7,3 +7,5 @@ code/utils/__pycache__
 .idea/framework.iml
 .idea
 .gitignore
+code/models/backbone/pretrained
+code/lufangxiao/contrastive_methods/PointFlow_model/pretrained

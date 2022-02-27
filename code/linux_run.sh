@@ -3,24 +3,24 @@
 # export CUDA_VISIBLE_DEVICES=6 # visible GPU device
 
 # change mode to choose either training 0 or testing 1
-mode=1;
+mode=0;
 
 if [ $mode -eq 0 ];
 then
 python trainer.py \
 --model unet \
 --epochs 300 \
---random_seed 423 \
+--random_seed 5334 \
 --n_class 2 \
 --chip_size 256 \
 --stride 128 \
---batch_size 2 \
---lr 0.001 \
---device cuda:0 \
+--batch_size 16 \
+--lr 0.0001 \
+--device cuda:5 \
 --train_data_path /home/xueruoyao/Documents/PythonProgram/dataset/segmented/train \
 --valid_data_path /home/xueruoyao/Documents/PythonProgram/dataset/segmented/valid \
---exp_path /home/xueruoyao/Documents/PythonProgram/exp/UNet \
---check_point_mode load \
+--exp_path /home/xueruoyao/Documents/PythonProgram/exp/seghrnet_DA \
+--check_point_mode save \
 
 elif [ $mode -eq 1 ];
 then

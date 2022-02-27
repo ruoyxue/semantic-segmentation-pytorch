@@ -5,25 +5,8 @@ import shutil
 from torchvision import transforms, utils as vutils
 import numpy as np
 import torch
-import utils.preprocessing as prepro
 import torch.nn.functional as F
 from torch import nn
-from collections import namedtuple
-import time
-import argparse
-import datetime
-import cv2
-from tqdm import tqdm
-from utils import PNGTestloader
-from utils import PNGTrainloader, TIFFTrainloader, PlateauLRScheduler, LogSoftmaxCELoss
-from ruamel import yaml
-from torch.utils.tensorboard import SummaryWriter
-from typing import Tuple
-from models import UNet
-
-
-image_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/image"
-gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/gt"
 
 # from utils import ComputerVisionTestLoader
 #
@@ -267,7 +250,20 @@ gt_path = "/home/xueruoyao/Documents/PythonProgram/dataset/deepglobe/gt"
 #         image_list.clear()
 #         gt_list.clear()
 
-resnet18 = torch.load("/home/xueruoyao/Documents/PythonProgram/resnet18-5c106cde.pth")
 
-for key in resnet18.keys():
-    print(key, "\n")
+# def one_hot(gt: torch.tensor):
+#     """ one hot of gt
+#     :param gt: (height, width)
+#     :return gt one hot version, with shape (n_class, height * width)
+#     """
+#     # one_hot (n_class, height * width)
+#     one_hot = F.one_hot(gt.reshape(-1), num_classes=2).T
+#     return one_hot * 1 + (torch.ones_like(one_hot) - one_hot) * 0
+#
+#
+# test = torch.LongTensor(256, 256)
+# print(one_hot(test).shape)
+a = torch.Tensor([[1, 2], [3, 4]])
+print(torch.mean(a, dim=[0,1]))
+
+
